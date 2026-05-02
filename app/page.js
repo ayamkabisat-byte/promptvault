@@ -365,7 +365,7 @@ function Card({ item, copiedId, onCopy, onOpen }) {
   const isCopied = copiedId === item.id;
 
   return (
-    <div ref={ref} className="pv-card" style={{ opacity: 0, transform: "translateY(20px)" }} onClick={() => onOpen(item)}>
+    <div ref={ref} className="pv-card" style={{ opacity: 1, transform: "translateY(20px)" }} onClick={() => onOpen(item)}>
       <div className="pv-card-img">
         <img className="pv-card-img-inner" src={item.image_url} alt={item.title} loading="lazy" />
         <div className="pv-card-badge">{item.category}</div>
