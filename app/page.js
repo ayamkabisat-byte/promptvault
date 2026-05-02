@@ -354,9 +354,20 @@ function Card({ item, copiedId, onCopy, onOpen }) {
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
+
+    el.style.opacity = "0";
+    el.style.transform = "translateY(20px)";
+
     const obs = new IntersectionObserver(
-      ([e]) => { if (e.isIntersecting) { el.classList.add("card-revealed"); obs.disconnect(); } },
-      { threshold: 0.08 }
+      ([e]) => {
+        if (e.isIntersecting) {
+          el.style.opacity = "";
+          el.style.transform = "";
+          el.classList.add("card-revealed");
+          obs.disconnect();
+        }
+      },
+      { threshold: 0.01, rootMargin: "0px 0px 50px 0px" }
     );
     obs.observe(el);
     return () => obs.disconnect();
@@ -365,7 +376,7 @@ function Card({ item, copiedId, onCopy, onOpen }) {
   const isCopied = copiedId === item.id;
 
   return (
-    <div ref={ref} className="pv-card" style={{ opacity: 1, transform: "translateY(20px)" }} onClick={() => onOpen(item)}>
+    <div ref={ref} className="pv-card" onClick={() => onOpen(item)}>
       <div className="pv-card-img">
         <img className="pv-card-img-inner" src={item.image_url} alt={item.title} loading="lazy" />
         <div className="pv-card-badge">{item.category}</div>
