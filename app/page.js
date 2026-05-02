@@ -9,7 +9,13 @@ import { createClient } from '@supabase/supabase-js';
 
 // --- KONFIGURASI ---
 const DEFAULT_CATEGORIES = ['All', 'Couple', 'Man', 'Woman', 'Vacation', 'Photoshoot', 'Selfie'];
-const AUTO_TAG_KEYWORDS = ['neon', 'cyberpunk', 'studio', 'beach', 'sunset', 'minimalist', 'fashion', 'dark', 'bright', 'vintage', 'car', 'night', 'sunlight', 'cinematic', 'portrait', 'realistic', 'anime', '3d'];
+const AUTO_TAG_KEYWORDS = [
+  'neon', 'cyberpunk', 'studio', 'beach', 'sunset', 'minimalist',
+  'fashion', 'dark', 'bright', 'vintage', 'car', 'night', 'sunlight',
+  'cinematic', 'portrait', 'realistic', 'anime', '3d',
+  'bokeh', 'dramatic', 'moody', 'golden hour', 'urban', 'forest',
+  'underwater', 'futuristic', 'retro', 'colorful', 'monochrome'
+];
 
 // Inisialisasi Supabase
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
@@ -42,6 +48,7 @@ export default function App() {
   const [editingId, setEditingId] = useState(null);
   const [currentImageUrl, setCurrentImageUrl] = useState('');
   const [selectedFile, setSelectedFile] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const [tagInput, setTagInput] = useState('');
   const [isAddingCategory, setIsAddingCategory] = useState(false);
@@ -81,7 +88,7 @@ export default function App() {
     }
   };
 
-  // --- FETCH: ADMIN PASSWORD DARI SUPABASE ---
+  // --- FETCH: ADMIN PASSWORD ---
   const fetchAdminPassword = async () => {
     try {
       const { data, error } = await supabase
@@ -89,13 +96,44 @@ export default function App() {
         .select('value')
         .eq('key', 'admin_password')
         .single();
-      if (data && !error) {
-        setDbPassword(data.value);
-      }
+      if (data && !error) setDbPassword(data.value);
     } catch (err) {
-      // Fallback ke default jika tabel belum ada
       setDbPassword('admin123');
     }
+  };
+
+  // --- UTILITAS: KONVERSI GAMBAR KE WEBP ---
+  const convertToWebP = (file, quality = 0.85) => {
+    return new Promise((resolve) => {
+      if (file.type === 'image/webp') {
+        resolve(file);
+        return;
+      }
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+
+      img.onload = () => {
+        canvas.width = img.width;
+        canvas.height = img.height;
+        ctx.drawImage(img, 0, 0);
+        URL.revokeObjectURL(url);
+        canvas.toBlob(
+          (blob) => {
+            const webpFile = new File(
+              [blob],
+              file.name.replace(/\.(jpg|jpeg|png|gif|bmp)$/i, '.webp'),
+              { type: 'image/webp' }
+            );
+            resolve(webpFile);
+          },
+          'image/webp',
+          quality
+        );
+      };
+      img.src = url;
+    });
   };
 
   // --- LOGIKA: LOGIN ---
@@ -113,35 +151,32 @@ export default function App() {
 
   // --- LOGIKA: GANTI PASSWORD ---
   const handleChangePassword = async () => {
-  if (!newPassword.trim()) return alert("Password tidak boleh kosong!");
-  if (newPassword.length < 6) return alert("Password minimal 6 karakter!");
-
-  try {
-    // Coba update dulu
-    const { data, error: updateError } = await supabase
-      .from('settings')
-      .update({ value: newPassword.trim() })
-      .eq('key', 'admin_password')
-      .select();
-
-    // Kalau row belum ada, insert baru
-    if (!updateError && data.length === 0) {
-      const { error: insertError } = await supabase
+    if (!newPassword.trim()) return alert("Password tidak boleh kosong!");
+    if (newPassword.length < 6) return alert("Password minimal 6 karakter!");
+    try {
+      const { data, error: updateError } = await supabase
         .from('settings')
-        .insert({ key: 'admin_password', value: newPassword.trim() });
-      if (insertError) throw insertError;
-    } else if (updateError) {
-      throw updateError;
-    }
+        .update({ value: newPassword.trim() })
+        .eq('key', 'admin_password')
+        .select();
 
-    setDbPassword(newPassword.trim());
-    setNewPassword('');
-    setIsChangingPass(false);
-    alert("Password berhasil diperbarui!");
-  } catch (err) {
-    alert("Gagal: " + err.message);
-  }
-};
+      if (!updateError && data.length === 0) {
+        const { error: insertError } = await supabase
+          .from('settings')
+          .insert({ key: 'admin_password', value: newPassword.trim() });
+        if (insertError) throw insertError;
+      } else if (updateError) {
+        throw updateError;
+      }
+
+      setDbPassword(newPassword.trim());
+      setNewPassword('');
+      setIsChangingPass(false);
+      alert("Password berhasil diperbarui!");
+    } catch (err) {
+      alert("Gagal: " + err.message);
+    }
+  };
 
   // --- LOGIKA: TAGS & AUTO-TAGGING ---
   const handleDescriptionChange = (e) => {
@@ -172,6 +207,16 @@ export default function App() {
     }));
   };
 
+  // --- LOGIKA: PILIH FILE + PREVIEW ---
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setSelectedFile(file);
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      setPreviewUrl(URL.createObjectURL(file));
+    }
+  };
+
   // --- LOGIKA: KATEGORI BARU ---
   const handleAddCategory = () => {
     if (newCatInput.trim()) {
@@ -195,6 +240,7 @@ export default function App() {
     });
     setCurrentImageUrl(item.image_url);
     setSelectedFile(null);
+    setPreviewUrl('');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -203,6 +249,8 @@ export default function App() {
     setAdminForm({ title: '', model: 'Gemini Nano Banana', category: 'Woman', description: '', tags: [] });
     setCurrentImageUrl('');
     setSelectedFile(null);
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setPreviewUrl('');
   };
 
   // --- LOGIKA: SUBMIT (INSERT / UPDATE) ---
@@ -222,13 +270,14 @@ export default function App() {
       let finalImageUrl = currentImageUrl;
 
       if (selectedFile) {
-        const fileExt = selectedFile.name.split('.').pop();
-        const fileName = `${Date.now()}.${fileExt}`;
+        // Konversi otomatis ke WebP
+        const webpFile = await convertToWebP(selectedFile);
+        const fileName = `${Date.now()}.webp`;
         const filePath = `uploads/${fileName}`;
 
         const { error: uploadError } = await supabase.storage
           .from('prompt-images')
-          .upload(filePath, selectedFile);
+          .upload(filePath, webpFile, { contentType: 'image/webp' });
         if (uploadError) throw uploadError;
 
         const { data: { publicUrl } } = supabase.storage
@@ -273,6 +322,16 @@ export default function App() {
     else alert("Gagal menghapus: " + error.message);
   };
 
+  // --- FILTER PROMPTS ---
+  const filteredPrompts = prompts.filter(p => {
+    const matchesCat = selectedCategory === 'All' || p.category === selectedCategory;
+    const matchesSearch =
+      p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      p.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (p.tags && p.tags.some(t => t.toLowerCase().includes(searchQuery.toLowerCase())));
+    return matchesCat && matchesSearch;
+  });
+
   // --- GUARD: ENV TIDAK ADA ---
   if (!supabaseUrl || !supabaseAnonKey) {
     return (
@@ -281,22 +340,24 @@ export default function App() {
           <Lock size={48} className="mx-auto text-yellow-500 mb-6" />
           <h2 className="text-2xl font-bold mb-2 text-white">Database Terputus</h2>
           <p className="text-slate-400 text-sm leading-relaxed">
-            Pastikan file <code className="text-cyan-400">.env.local</code> sudah berisi 
-            <code className="text-cyan-400"> NEXT_PUBLIC_SUPABASE_URL</code> dan 
-            <code className="text-cyan-400"> NEXT_PUBLIC_SUPABASE_ANON_KEY</code>.
+            Pastikan file <code className="text-cyan-400">.env.local</code> sudah berisi{' '}
+            <code className="text-cyan-400">NEXT_PUBLIC_SUPABASE_URL</code> dan{' '}
+            <code className="text-cyan-400">NEXT_PUBLIC_SUPABASE_ANON_KEY</code>.
           </p>
         </div>
       </div>
     );
   }
 
-  // --- RENDER UTAMA ---
+  // ============================================================
+  // RENDER UTAMA
+  // ============================================================
   return (
     <div className="min-h-screen bg-[#0f172a] text-slate-200 font-sans selection:bg-cyan-500/30">
 
       {/* NAVBAR */}
       <nav className="border-b border-slate-800 bg-[#0f172a]/80 backdrop-blur-md sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+        <div className="max-w-screen-2xl mx-auto px-6 py-4 flex justify-between items-center">
           <div className="flex items-center gap-3 cursor-pointer" onClick={() => setActiveTab('gallery')}>
             <div className="w-10 h-10 rounded-full bg-[#1e293b] flex items-center justify-center overflow-hidden border border-slate-700">
               <img src="/logo.png" alt="Logo" className="w-full h-full object-cover" />
@@ -308,13 +369,13 @@ export default function App() {
           <div className="flex gap-4">
             <button
               onClick={() => setActiveTab('gallery')}
-              className={`flex items-center gap-2 text-sm font-medium transition-colors ${activeTab === 'gallery' ? 'text-cyan-400' : 'text-slate-400'}`}
+              className={`flex items-center gap-2 text-sm font-medium transition-colors ${activeTab === 'gallery' ? 'text-cyan-400' : 'text-slate-400 hover:text-slate-200'}`}
             >
               <LayoutGrid size={16} /> Galeri
             </button>
             <button
               onClick={() => setActiveTab('admin')}
-              className={`flex items-center gap-2 text-sm font-medium transition-colors ${activeTab === 'admin' ? 'text-cyan-400' : 'text-slate-400'}`}
+              className={`flex items-center gap-2 text-sm font-medium transition-colors ${activeTab === 'admin' ? 'text-cyan-400' : 'text-slate-400 hover:text-slate-200'}`}
             >
               {isAdminLoggedIn ? <><Settings size={16} /> Dashboard</> : <><LogIn size={16} /> Admin</>}
             </button>
@@ -326,20 +387,23 @@ export default function App() {
       {/* TAB: GALLERY                                                  */}
       {/* ============================================================ */}
       {activeTab === 'gallery' ? (
-        <div className="max-w-7xl mx-auto p-6">
-          <header className="mb-10 text-center md:text-left">
+        <div className="max-w-screen-2xl mx-auto p-6 md:p-10">
+          <header className="mb-10">
             <h1 className="text-4xl md:text-5xl font-serif text-slate-100 mb-2 leading-tight">
               AI Prompt <span className="text-cyan-400 italic">Gallery</span>
             </h1>
-            <p className="text-slate-400 text-lg opacity-80 leading-relaxed">
+            <p className="text-slate-400 text-lg opacity-80">
               Koleksi prompt visual terbaik untuk proyek kreasi AI Anda.
             </p>
           </header>
 
           {/* SEARCH & FILTER */}
-          <div className="flex flex-col md:flex-row gap-4 mb-12">
+          <div className="flex flex-col md:flex-row gap-4 mb-6">
             <div className="flex-grow relative group">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-cyan-400 transition-colors" size={20} />
+              <Search
+                className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-cyan-400 transition-colors"
+                size={20}
+              />
               <input
                 type="text"
                 placeholder="Cari judul, tag, atau kategori..."
@@ -352,12 +416,17 @@ export default function App() {
               <select
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
-                className="w-full md:w-48 bg-[#1e293b] border border-slate-700 rounded-2xl px-6 py-4 outline-none cursor-pointer appearance-none hover:border-cyan-500/50 transition-colors text-slate-200"
+                className="w-full md:w-52 bg-[#1e293b] border border-slate-700 rounded-2xl px-6 py-4 outline-none cursor-pointer appearance-none hover:border-cyan-500/50 transition-colors text-slate-200"
               >
                 {categories.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
               <Filter size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
             </div>
+          </div>
+
+          {/* STATS */}
+          <div className="mb-6 text-xs text-slate-600 font-bold uppercase tracking-widest">
+            {isLoading ? 'Memuat...' : `${filteredPrompts.length} prompt ditemukan`}
           </div>
 
           {/* LOADING */}
@@ -367,73 +436,91 @@ export default function App() {
               <p className="text-slate-500 font-medium animate-pulse tracking-wide">Sinkronisasi data Supabase...</p>
             </div>
           ) : (
-            <div className="columns-1 sm:columns-2 lg:columns-3 gap-8 space-y-8">
-              {prompts.filter(p => {
-                const matchesCat = selectedCategory === 'All' || p.category === selectedCategory;
-                const matchesSearch =
-                  p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                  p.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                  (p.tags && p.tags.some(t => t.toLowerCase().includes(searchQuery.toLowerCase())));
-                return matchesCat && matchesSearch;
-              }).map((item) => (
-                <div
-                  key={item.id}
-                  className="break-inside-avoid bg-[#162032] rounded-[2.5rem] border border-slate-800 overflow-hidden group hover:border-cyan-500/40 transition-all duration-500 shadow-xl hover:shadow-cyan-500/10"
-                >
-                  <div className="relative aspect-[3/4] bg-slate-900 overflow-hidden">
-                    <img
-                      src={item.image_url}
-                      alt={item.title}
-                      loading="lazy"
-                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                    />
-                    <div className="absolute top-5 left-5">
-                      <span className="bg-black/70 backdrop-blur-md px-4 py-1.5 rounded-full text-[10px] font-black text-cyan-400 border border-cyan-400/20 uppercase tracking-[0.2em]">
-                        {item.category}
-                      </span>
+            <>
+              {/*
+                GRID GALERI:
+                - Mobile (< sm): 2 kolom
+                - Tablet (sm): 3 kolom
+                - Desktop (lg): 4 kolom  ← default utama
+                - Layar besar (xl): 5 kolom
+                - Layar sangat besar (2xl): 6 kolom
+                Otomatis menyesuaikan lebar layar.
+              */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 md:gap-5">
+                {filteredPrompts.map((item) => (
+                  <div
+                    key={item.id}
+                    className="bg-[#162032] rounded-[1.25rem] border border-slate-800/80 overflow-hidden group hover:border-cyan-500/40 transition-all duration-500 shadow-lg hover:shadow-cyan-500/10 flex flex-col"
+                  >
+                    {/* GAMBAR */}
+                    <div className="relative aspect-[3/4] bg-slate-900 overflow-hidden flex-shrink-0">
+                      <img
+                        src={item.image_url}
+                        alt={item.title}
+                        loading="lazy"
+                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                      />
+
+                      {/* BADGE KATEGORI */}
+                      <div className="absolute top-2.5 left-2.5">
+                        <span className="bg-black/70 backdrop-blur-md px-2.5 py-1 rounded-full text-[8px] font-black text-cyan-400 border border-cyan-400/20 uppercase tracking-[0.15em]">
+                          {item.category}
+                        </span>
+                      </div>
+
+                      {/* OVERLAY HOVER — TAGS */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-[#0f172a]/95 via-[#0f172a]/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-3 gap-1.5">
+                        <p className="text-[9px] text-slate-300 line-clamp-3 leading-relaxed italic">
+                          "{item.description}"
+                        </p>
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {item.tags?.slice(0, 3).map(t => (
+                            <span key={t} className="text-[7px] text-cyan-300/80 bg-cyan-900/60 px-1.5 py-0.5 rounded font-bold">
+                              #{t}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* INFO CARD */}
+                    <div className="p-3.5 flex flex-col flex-grow gap-2.5">
+                      <h3 className="font-serif text-xs text-slate-100 leading-tight tracking-tight line-clamp-2 flex-grow">
+                        {item.title}
+                      </h3>
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(item.description);
+                          setCopiedId(item.id);
+                          setTimeout(() => setCopiedId(null), 2000);
+                        }}
+                        className={`w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-[9px] font-black transition-all duration-300 ${
+                          copiedId === item.id
+                            ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/50'
+                            : 'bg-slate-100 hover:bg-white text-slate-900 shadow-md'
+                        }`}
+                      >
+                        {copiedId === item.id
+                          ? <><Check size={11} /> TERSALIN</>
+                          : <><Copy size={11} /> SALIN PROMPT</>}
+                      </button>
                     </div>
                   </div>
-                  <div className="p-8">
-                    <h3 className="font-serif text-2xl text-slate-100 mb-2 leading-tight tracking-tight">{item.title}</h3>
-                    <div className="flex flex-wrap gap-1.5 mb-5">
-                      {item.tags?.map(t => (
-                        <span key={t} className="text-[10px] text-slate-500 bg-slate-800/50 px-2.5 py-1 rounded-md border border-slate-700/30 font-bold">#{t}</span>
-                      ))}
-                    </div>
-                    <p className="text-sm text-slate-400 line-clamp-3 mb-8 leading-relaxed italic opacity-80">"{item.description}"</p>
-                    <button
-                      onClick={() => {
-                        navigator.clipboard.writeText(item.description);
-                        setCopiedId(item.id);
-                        setTimeout(() => setCopiedId(null), 2000);
-                      }}
-                      className={`w-full flex items-center justify-center gap-3 py-4 rounded-[1.25rem] text-sm font-bold transition-all duration-300 ${
-                        copiedId === item.id
-                          ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/50'
-                          : 'bg-slate-100 hover:bg-white text-slate-900 shadow-lg shadow-white/5'
-                      }`}
-                    >
-                      {copiedId === item.id ? <><Check size={18} /> TERSALIN</> : <><Copy size={18} /> SALIN PROMPT</>}
-                    </button>
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
 
               {/* EMPTY STATE */}
-              {prompts.filter(p => {
-                const matchesCat = selectedCategory === 'All' || p.category === selectedCategory;
-                const matchesSearch =
-                  p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                  p.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                  (p.tags && p.tags.some(t => t.toLowerCase().includes(searchQuery.toLowerCase())));
-                return matchesCat && matchesSearch;
-              }).length === 0 && (
-                <div className="col-span-full py-20 text-center bg-[#1e293b]/30 rounded-[3rem] border border-slate-800 border-dashed">
+              {filteredPrompts.length === 0 && (
+                <div className="py-20 text-center bg-[#1e293b]/30 rounded-[3rem] border border-slate-800 border-dashed mt-4">
                   <ImageIcon size={48} className="mx-auto text-slate-700 mb-4 opacity-30" />
-                  <p className="text-slate-500 italic font-serif text-lg">Belum ada koleksi yang dipublikasikan.</p>
+                  <p className="text-slate-500 italic font-serif text-lg">
+                    {searchQuery || selectedCategory !== 'All'
+                      ? 'Tidak ada hasil yang cocok.'
+                      : 'Belum ada koleksi yang dipublikasikan.'}
+                  </p>
                 </div>
               )}
-            </div>
+            </>
           )}
         </div>
 
@@ -479,7 +566,7 @@ export default function App() {
             /* DASHBOARD */
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
 
-              {/* KOLOM KIRI: Form + Security */}
+              {/* KOLOM KIRI */}
               <div className="lg:col-span-1 space-y-6">
 
                 {/* PANEL KEAMANAN */}
@@ -550,29 +637,43 @@ export default function App() {
                     />
                   </div>
 
-                  {/* FILE GAMBAR */}
+                  {/* FILE GAMBAR + PREVIEW */}
                   <div className="space-y-1.5">
                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] ml-1">
                       File Gambar {editingId && '(Opsional)'}
+                      <span className="text-cyan-600 normal-case font-normal ml-1">— auto convert ke WebP</span>
                     </label>
-                    <label className="flex flex-col items-center justify-center w-full h-40 border-2 border-dashed border-slate-700 rounded-[2rem] cursor-pointer hover:bg-slate-800/50 transition-all group">
-                      {selectedFile ? (
-                        <div className="text-center px-4">
-                          <Check className="mx-auto text-emerald-400 mb-2" />
-                          <span className="text-cyan-400 text-[10px] font-black truncate block uppercase">{selectedFile.name}</span>
-                        </div>
-                      ) : editingId ? (
-                        <div className="text-center">
-                          <img src={currentImageUrl} className="w-12 h-12 object-cover mx-auto rounded-lg mb-2 opacity-40 border border-slate-700 grayscale" />
-                          <span className="text-[10px] text-slate-500 uppercase font-black tracking-widest">Ganti Gambar...</span>
-                        </div>
+                    <label className="flex flex-col items-center justify-center w-full h-44 border-2 border-dashed border-slate-700 rounded-[2rem] cursor-pointer hover:bg-slate-800/30 transition-all group overflow-hidden relative">
+                      {previewUrl ? (
+                        <>
+                          <img src={previewUrl} className="absolute inset-0 w-full h-full object-cover" alt="preview" />
+                          <div className="absolute inset-0 bg-black/55 flex flex-col items-center justify-center gap-2">
+                            <Check className="text-emerald-400" size={24} />
+                            <span className="text-[10px] text-emerald-400 font-black uppercase tracking-widest">Siap → Auto WebP ✓</span>
+                            <span className="text-[9px] text-slate-300 max-w-[80%] truncate text-center">{selectedFile?.name}</span>
+                          </div>
+                        </>
+                      ) : editingId && currentImageUrl ? (
+                        <>
+                          <img src={currentImageUrl} className="absolute inset-0 w-full h-full object-cover opacity-25 grayscale" alt="current" />
+                          <div className="relative z-10 text-center">
+                            <ImageIcon className="mx-auto text-slate-500 mb-1" size={20} />
+                            <span className="text-[10px] text-slate-400 uppercase font-black tracking-widest">Klik untuk ganti gambar</span>
+                          </div>
+                        </>
                       ) : (
-                        <div className="text-center">
-                          <ImageIcon className="mx-auto text-slate-600 mb-2 group-hover:text-cyan-500/50 transition-colors" />
-                          <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Pilih WebP/PNG...</span>
+                        <div className="text-center pointer-events-none">
+                          <Upload className="mx-auto text-slate-600 mb-2 group-hover:text-cyan-500/50 transition-colors" size={28} />
+                          <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Pilih JPG / PNG / WebP</span>
+                          <p className="text-[9px] text-slate-700 mt-1">Otomatis dikonversi ke WebP</p>
                         </div>
                       )}
-                      <input type="file" accept="image/*" className="hidden" onChange={e => setSelectedFile(e.target.files[0])} />
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/jpg,image/png,image/webp,image/gif,image/bmp"
+                        className="hidden"
+                        onChange={handleFileChange}
+                      />
                     </label>
                   </div>
 
@@ -612,7 +713,10 @@ export default function App() {
 
                   {/* TAGS */}
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] ml-1">Tags (Auto & Manual)</label>
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] ml-1">
+                      Tags
+                      <span className="text-cyan-700 normal-case font-normal ml-1">— auto dari prompt + manual</span>
+                    </label>
                     <div className="min-h-[70px] bg-[#0f172a] border border-slate-700 rounded-2xl p-3 flex flex-wrap gap-2 shadow-inner">
                       {adminForm.tags.map(tag => (
                         <span key={tag} className="flex items-center gap-1.5 bg-cyan-500/10 text-cyan-400 text-[10px] px-3 py-1.5 rounded-lg border border-cyan-500/20 font-black tracking-wide">
@@ -639,7 +743,7 @@ export default function App() {
                       value={adminForm.description}
                       onChange={handleDescriptionChange}
                       className="w-full bg-[#0f172a] border border-slate-700 rounded-2xl p-4 text-sm outline-none focus:border-cyan-500 resize-none leading-relaxed shadow-inner"
-                      placeholder="Paste prompt AI di sini..."
+                      placeholder="Paste prompt AI — tag akan muncul otomatis..."
                     />
                   </div>
 
@@ -650,7 +754,7 @@ export default function App() {
                     className="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-black py-5 rounded-[1.5rem] flex items-center justify-center gap-3 disabled:opacity-50 transition-all shadow-xl shadow-cyan-900/30 uppercase tracking-widest text-xs"
                   >
                     {isUploading
-                      ? "Memproses..."
+                      ? "Mengkonversi & Mengupload..."
                       : editingId
                         ? <><Check size={22} /> Simpan Perubahan</>
                         : <><Upload size={22} /> Publikasikan</>}
@@ -662,7 +766,7 @@ export default function App() {
               <div className="lg:col-span-2 bg-[#1e293b] rounded-[2.5rem] border border-slate-700 p-10 shadow-2xl overflow-hidden flex flex-col">
                 <div className="flex justify-between items-center mb-8 px-2">
                   <h2 className="text-2xl font-bold text-white tracking-tight">
-                    Katalog Prompts ({prompts.length})
+                    Katalog Prompts <span className="text-cyan-400">({prompts.length})</span>
                   </h2>
                   <button
                     onClick={() => { setIsAdminLoggedIn(false); cancelEditing(); }}
@@ -672,53 +776,53 @@ export default function App() {
                   </button>
                 </div>
 
-                <div className="rounded-[2.5rem] border border-slate-800 overflow-hidden shadow-2xl bg-[#0f172a]/40 flex-grow">
+                <div className="rounded-[2rem] border border-slate-800 overflow-auto shadow-2xl bg-[#0f172a]/40 flex-grow">
                   <table className="w-full text-left text-sm border-collapse">
                     <thead className="bg-slate-800/90 text-slate-500 font-black uppercase text-[10px] tracking-[0.3em]">
                       <tr>
-                        <th className="p-6">Visual</th>
-                        <th className="p-6">Detail Prompt</th>
-                        <th className="p-6 text-right">Manajemen</th>
+                        <th className="p-5">Visual</th>
+                        <th className="p-5">Detail Prompt</th>
+                        <th className="p-5 text-right">Aksi</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-800/50">
                       {prompts.length > 0 ? prompts.map(p => (
                         <tr key={p.id} className="hover:bg-slate-800/30 transition-all duration-300 group">
-                          <td className="p-6">
+                          <td className="p-5">
                             <img
                               src={p.image_url}
                               alt={p.title}
-                              className="w-20 h-20 object-cover rounded-3xl border-2 border-slate-800 shadow-xl transition-transform group-hover:scale-105"
+                              className="w-16 h-16 object-cover rounded-2xl border-2 border-slate-800 shadow-xl transition-transform group-hover:scale-105"
                             />
                           </td>
-                          <td className="p-6">
-                            <p className="font-serif text-xl text-slate-100 leading-none mb-2 tracking-tight group-hover:text-cyan-400 transition-colors">{p.title}</p>
-                            <div className="flex items-center gap-3">
-                              <span className="text-[10px] text-cyan-500 font-black uppercase tracking-[0.2em] bg-cyan-500/5 px-2 py-0.5 rounded border border-cyan-500/10">
+                          <td className="p-5">
+                            <p className="font-serif text-base text-slate-100 leading-none mb-2 tracking-tight group-hover:text-cyan-400 transition-colors line-clamp-1">
+                              {p.title}
+                            </p>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-[9px] text-cyan-500 font-black uppercase tracking-[0.2em] bg-cyan-500/5 px-2 py-0.5 rounded border border-cyan-500/10">
                                 {p.category}
                               </span>
-                              <div className="flex gap-1.5">
-                                {p.tags?.slice(0, 3).map(t => (
-                                  <span key={t} className="text-[9px] text-slate-600 italic">#{t}</span>
-                                ))}
-                              </div>
+                              {p.tags?.slice(0, 3).map(t => (
+                                <span key={t} className="text-[9px] text-slate-600 italic">#{t}</span>
+                              ))}
                             </div>
                           </td>
-                          <td className="p-6 text-right">
-                            <div className="flex justify-end gap-3 opacity-60 group-hover:opacity-100 transition-opacity">
+                          <td className="p-5 text-right">
+                            <div className="flex justify-end gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
                               <button
                                 onClick={() => startEditing(p)}
-                                className="p-3.5 bg-slate-800/80 text-slate-400 hover:text-cyan-400 hover:bg-cyan-400/10 rounded-2xl transition-all shadow-md"
+                                className="p-3 bg-slate-800/80 text-slate-400 hover:text-cyan-400 hover:bg-cyan-400/10 rounded-xl transition-all"
                                 title="Edit"
                               >
-                                <Edit2 size={20} />
+                                <Edit2 size={16} />
                               </button>
                               <button
                                 onClick={() => handleDelete(p.id)}
-                                className="p-3.5 bg-slate-800/80 text-slate-400 hover:text-red-400 hover:bg-red-400/10 rounded-2xl transition-all shadow-md"
+                                className="p-3 bg-slate-800/80 text-slate-400 hover:text-red-400 hover:bg-red-400/10 rounded-xl transition-all"
                                 title="Hapus"
                               >
-                                <Trash2 size={20} />
+                                <Trash2 size={16} />
                               </button>
                             </div>
                           </td>
