@@ -113,24 +113,35 @@ export default function App() {
 
   // --- LOGIKA: GANTI PASSWORD ---
   const handleChangePassword = async () => {
-    if (!newPassword.trim()) return alert("Password tidak boleh kosong!");
-    if (newPassword.length < 6) return alert("Password minimal 6 karakter!");
+  if (!newPassword.trim()) return alert("Password tidak boleh kosong!");
+  if (newPassword.length < 6) return alert("Password minimal 6 karakter!");
 
-    try {
-      const { error } = await supabase
+  try {
+    // Coba update dulu
+    const { data, error: updateError } = await supabase
+      .from('settings')
+      .update({ value: newPassword.trim() })
+      .eq('key', 'admin_password')
+      .select();
+
+    // Kalau row belum ada, insert baru
+    if (!updateError && data.length === 0) {
+      const { error: insertError } = await supabase
         .from('settings')
-        .upsert({ key: 'admin_password', value: newPassword.trim() });
-
-      if (error) throw error;
-
-      setDbPassword(newPassword.trim());
-      setNewPassword('');
-      setIsChangingPass(false);
-      alert("Password berhasil diperbarui!");
-    } catch (err) {
-      alert("Gagal memperbarui password: " + err.message);
+        .insert({ key: 'admin_password', value: newPassword.trim() });
+      if (insertError) throw insertError;
+    } else if (updateError) {
+      throw updateError;
     }
-  };
+
+    setDbPassword(newPassword.trim());
+    setNewPassword('');
+    setIsChangingPass(false);
+    alert("Password berhasil diperbarui!");
+  } catch (err) {
+    alert("Gagal: " + err.message);
+  }
+};
 
   // --- LOGIKA: TAGS & AUTO-TAGGING ---
   const handleDescriptionChange = (e) => {
