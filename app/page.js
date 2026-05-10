@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { createClient } from "@supabase/supabase-js";
 import {
-  Search, Copy, Check, Filter, LayoutGrid, LogIn, Settings,
+  Search, Copy, Check, LayoutGrid, LogIn, Settings,
   Lock, Plus, Upload, Trash2, Edit2, X, KeyRound, Image as ImageIcon,
+  Camera, Palette, Brush,
 } from "lucide-react";
 
 /* ─────────────────────────────────────────────
@@ -15,9 +16,22 @@ const supabaseKey  = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
 const supabase     = createClient(supabaseUrl, supabaseKey);
 
 /* ─────────────────────────────────────────────
-   CONSTANTS
+   CONSTANTS — Mediums & Categories
 ───────────────────────────────────────────── */
-const DEFAULT_CATEGORIES = ["All", "Couple", "Man", "Woman", "Vacation", "Photoshoot", "Selfie"];
+const MEDIUMS = ["Fotografi", "Graphic", "Ilustrasi"];
+
+const MEDIUM_ICONS = {
+  Fotografi: Camera,
+  Graphic: Palette,
+  Ilustrasi: Brush,
+};
+
+// Default categories per medium. Tambahan dari user akan di-merge otomatis.
+const DEFAULT_CATEGORIES_BY_MEDIUM = {
+  Fotografi: ["Couple", "Man", "Woman", "Vacation", "Photoshoot", "Selfie"],
+  Graphic:   ["Poster", "Logo", "Branding", "Typography", "Packaging"],
+  Ilustrasi: ["Character", "Scene", "Concept Art", "Anime", "Editorial"],
+};
 
 const AUTO_TAG_KEYWORDS = [
   "neon","cyberpunk","studio","beach","sunset","minimalist","fashion","dark",
@@ -26,9 +40,10 @@ const AUTO_TAG_KEYWORDS = [
   "underwater","futuristic","retro","colorful","monochrome",
 ];
 
+const ADD_NEW_CAT_VALUE = "__ADD_NEW_CATEGORY__";
+
 /* ─────────────────────────────────────────────
-   INLINE STYLES  (scoped CSS-in-JS)
-   We use a single <style> tag injected once.
+   STYLES
 ───────────────────────────────────────────── */
 const STYLES = `
   /* NAV */
@@ -55,7 +70,7 @@ const STYLES = `
   .pv-page{max-width:1440px;margin:0 auto;padding:0 32px}
 
   /* HERO */
-  .pv-hero{padding:64px 0 44px}
+  .pv-hero{padding:64px 0 36px}
   .pv-hero-eyebrow{display:inline-flex;align-items:center;gap:7px;font-size:11px;
     font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--accent);
     margin-bottom:18px;padding:5px 13px;border-radius:100px;
@@ -71,6 +86,22 @@ const STYLES = `
     color:var(--text);letter-spacing:-1px}
   .pv-stat-label{font-size:11px;color:var(--text-dim);font-weight:700;
     letter-spacing:.1em;text-transform:uppercase}
+
+  /* MEDIUM TABS — top-level navigation */
+  .pv-mediums{display:flex;gap:2px;margin-bottom:24px;border-bottom:1px solid var(--border);
+    overflow-x:auto;scrollbar-width:none}
+  .pv-mediums::-webkit-scrollbar{display:none}
+  .pv-medium{display:inline-flex;align-items:center;gap:9px;padding:14px 20px;
+    font-size:14px;font-weight:600;cursor:pointer;color:var(--text-muted);
+    border:none;background:none;border-bottom:2px solid transparent;
+    transition:color .18s,border-color .18s;font-family:'DM Sans',sans-serif;
+    margin-bottom:-1px;white-space:nowrap}
+  .pv-medium:hover{color:var(--text)}
+  .pv-medium.active{color:var(--accent);border-bottom-color:var(--accent)}
+  .pv-medium-count{font-size:10px;font-weight:700;color:var(--text-dim);
+    padding:2px 8px;border-radius:100px;background:var(--surface2);
+    letter-spacing:.04em}
+  .pv-medium.active .pv-medium-count{color:var(--accent);background:var(--accent-dim)}
 
   /* TOOLBAR */
   .pv-toolbar{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap}
@@ -176,7 +207,8 @@ const STYLES = `
   .pv-modal-img{width:100%;aspect-ratio:16/9;object-fit:cover;flex-shrink:0}
   .pv-modal-body{padding:28px;overflow-y:auto}
   .pv-modal-cat{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
-    color:var(--accent);margin-bottom:8px}
+    color:var(--accent);margin-bottom:8px;display:flex;align-items:center;gap:8px}
+  .pv-modal-cat-medium{color:var(--text-dim);font-weight:500}
   .pv-modal-title{font-size:22px;font-weight:700;margin-bottom:14px;
     font-family:'DM Serif Display',serif}
   .pv-modal-prompt{font-size:13px;line-height:1.7;color:var(--text-muted);
@@ -255,7 +287,27 @@ const STYLES = `
   .pv-field-input:focus,.pv-field-select:focus,.pv-field-textarea:focus{
     border-color:var(--accent-border)}
   .pv-field-textarea{resize:none;line-height:1.6}
-  .pv-field-select{cursor:pointer;appearance:none}
+  .pv-field-select{cursor:pointer;appearance:none;
+    background-image:url("data:image/svg+xml,%3Csvg width='12' height='12' viewBox='0 0 12 12' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M2 4l4 4 4-4' stroke='rgba(232,232,224,0.35)' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;background-position:right 12px center;
+    padding-right:36px}
+
+  /* ADD CATEGORY INLINE */
+  .pv-add-cat-row{display:flex;gap:6px;align-items:stretch}
+  .pv-add-cat-row input{flex:1;background:var(--bg);
+    border:1px solid var(--accent-border);border-radius:10px;
+    padding:12px 14px;font-size:13px;color:var(--text);outline:none;
+    font-family:'DM Sans',sans-serif}
+  .pv-add-cat-row input:focus{border-color:var(--accent)}
+  .pv-add-cat-btn{padding:0 14px;border:none;border-radius:10px;cursor:pointer;
+    font-size:11px;font-weight:700;font-family:'DM Sans',sans-serif;
+    text-transform:uppercase;letter-spacing:.06em;display:flex;
+    align-items:center;justify-content:center;transition:all .15s}
+  .pv-add-cat-btn.confirm{background:var(--accent);color:#080808}
+  .pv-add-cat-btn.confirm:hover{background:#f09c30}
+  .pv-add-cat-btn.cancel{background:var(--surface2);color:var(--text-muted);
+    border:1px solid var(--border)}
+  .pv-add-cat-btn.cancel:hover{color:#ef4444}
 
   .pv-upload-zone{width:100%;aspect-ratio:4/3;border-radius:12px;
     border:2px dashed var(--border);overflow:hidden;display:flex;flex-direction:column;
@@ -315,10 +367,13 @@ const STYLES = `
   .pv-row-thumb{width:56px;height:56px;border-radius:10px;object-fit:cover;
     border:1px solid var(--border)}
   .pv-row-title{font-weight:500;color:var(--text);line-height:1.3}
+  .pv-row-meta{display:flex;gap:6px;align-items:center;margin-top:4px;flex-wrap:wrap}
   .pv-row-cat{display:inline-block;font-size:9px;font-weight:700;letter-spacing:.08em;
     text-transform:uppercase;padding:3px 8px;border-radius:5px;
     background:var(--accent-dim);border:1px solid var(--accent-border);
-    color:var(--accent);margin-top:4px}
+    color:var(--accent)}
+  .pv-row-medium{display:inline-block;font-size:9px;font-weight:600;
+    letter-spacing:.05em;color:var(--text-dim);font-style:italic}
   .pv-action-btn{padding:8px;border-radius:8px;border:none;background:var(--surface2);
     cursor:pointer;color:var(--text-muted);transition:all .15s}
   .pv-action-btn.edit:hover{color:var(--accent);background:var(--accent-dim)}
@@ -342,11 +397,17 @@ const STYLES = `
   }
   @media(max-width:480px){
     .pv-nav-logo-name{font-size:16px}
+    .pv-medium{padding:12px 14px;font-size:13px}
   }
 `;
 
 /* ─────────────────────────────────────────────
-   CARD with Intersection Observer reveal
+   Helpers
+───────────────────────────────────────────── */
+const getMedium = (item) => item.medium || "Fotografi"; // backward-compat for legacy rows
+
+/* ─────────────────────────────────────────────
+   CARD
 ───────────────────────────────────────────── */
 function Card({ item, copiedId, onCopy, onOpen }) {
   const ref = useRef(null);
@@ -420,7 +481,10 @@ function Modal({ item, copiedId, onCopy, onClose }) {
         <button className="pv-modal-close" onClick={onClose}><X size={14} /></button>
         <img className="pv-modal-img" src={item.image_url} alt={item.title} />
         <div className="pv-modal-body">
-          <div className="pv-modal-cat">{item.category}</div>
+          <div className="pv-modal-cat">
+            <span>{item.category}</span>
+            <span className="pv-modal-cat-medium">· {getMedium(item)}</span>
+          </div>
           <div className="pv-modal-title">{item.title}</div>
           {item.model && <div style={{ fontSize: 11, color: "var(--text-dim)", marginBottom: 12 }}>{item.model}</div>}
           <div className="pv-modal-prompt">{item.description}</div>
@@ -441,30 +505,53 @@ function Modal({ item, copiedId, onCopy, onClose }) {
 ───────────────────────────────────────────── */
 function GalleryPage({ prompts, loading }) {
   const [search, setSearch]     = useState("");
+  const [medium, setMedium]     = useState("All");
   const [cat, setCat]           = useState("All");
   const [sort, setSort]         = useState("newest");
   const [copiedId, setCopiedId] = useState(null);
   const [modal, setModal]       = useState(null);
 
-  const categories = React.useMemo(() => {
-    const extra = [...new Set(prompts.map(p => p.category))];
-    return [...new Set([...DEFAULT_CATEGORIES, ...extra])];
+  // Reset category filter when medium changes — selected cat may not exist in new medium
+  useEffect(() => { setCat("All"); }, [medium]);
+
+  // Counts per medium for tab badges
+  const mediumCounts = useMemo(() => {
+    const counts = { All: prompts.length };
+    MEDIUMS.forEach(m => {
+      counts[m] = prompts.filter(p => getMedium(p) === m).length;
+    });
+    return counts;
   }, [prompts]);
 
-  const filtered = React.useMemo(() => {
+  // Categories scoped to current medium (defaults + user-added merged)
+  const categories = useMemo(() => {
+    const inMedium = medium === "All"
+      ? prompts
+      : prompts.filter(p => getMedium(p) === medium);
+
+    const defaults = medium === "All"
+      ? Object.values(DEFAULT_CATEGORIES_BY_MEDIUM).flat()
+      : DEFAULT_CATEGORIES_BY_MEDIUM[medium] || [];
+
+    const fromPrompts = inMedium.map(p => p.category).filter(Boolean);
+    return ["All", ...new Set([...defaults, ...fromPrompts])];
+  }, [prompts, medium]);
+
+  const filtered = useMemo(() => {
     let res = prompts.filter(p => {
+      const matchMedium = medium === "All" || getMedium(p) === medium;
       const matchCat    = cat === "All" || p.category === cat;
       const q           = search.toLowerCase();
       const matchSearch = !q ||
         p.title.toLowerCase().includes(q) ||
         p.description.toLowerCase().includes(q) ||
         (p.tags || []).some(t => t.toLowerCase().includes(q));
-      return matchCat && matchSearch;
+      return matchMedium && matchCat && matchSearch;
     });
     if (sort === "az") res = [...res].sort((a, b) => a.title.localeCompare(b.title));
     if (sort === "za") res = [...res].sort((a, b) => b.title.localeCompare(a.title));
     return res;
-  }, [prompts, cat, search, sort]);
+  }, [prompts, medium, cat, search, sort]);
 
   const handleCopy = useCallback(item => {
     navigator.clipboard?.writeText(item.description).catch(() => {});
@@ -492,7 +579,7 @@ function GalleryPage({ prompts, loading }) {
         <div className="pv-hero-stats">
           {[
             { n: prompts.length, l: "Prompts" },
-            { n: categories.length - 1, l: "Categories" },
+            { n: MEDIUMS.length, l: "Mediums" },
             { n: uniqueTags, l: "Unique Tags" },
           ].map(s => (
             <div key={s.l}>
@@ -501,6 +588,32 @@ function GalleryPage({ prompts, loading }) {
             </div>
           ))}
         </div>
+      </div>
+
+      {/* MEDIUM TABS — top-level navigation */}
+      <div className="pv-mediums">
+        <button
+          className={`pv-medium${medium === "All" ? " active" : ""}`}
+          onClick={() => setMedium("All")}
+        >
+          <LayoutGrid size={15} />
+          Semua / All
+          <span className="pv-medium-count">{mediumCounts.All}</span>
+        </button>
+        {MEDIUMS.map(m => {
+          const Icon = MEDIUM_ICONS[m];
+          return (
+            <button
+              key={m}
+              className={`pv-medium${medium === m ? " active" : ""}`}
+              onClick={() => setMedium(m)}
+            >
+              <Icon size={15} />
+              {m}
+              <span className="pv-medium-count">{mediumCounts[m]}</span>
+            </button>
+          );
+        })}
       </div>
 
       {/* TOOLBAR */}
@@ -541,7 +654,7 @@ function GalleryPage({ prompts, loading }) {
           {filtered.length === 0 ? (
             <div className="pv-empty">
               <ImageIcon size={40} style={{ color: "var(--text-dim)", margin: "0 auto 16px", display: "block" }} />
-              <p>{search || cat !== "All" ? "Tidak ada hasil. / No results found." : "Belum ada prompt. / No prompts yet."}</p>
+              <p>{search || cat !== "All" || medium !== "All" ? "Tidak ada hasil. / No results found." : "Belum ada prompt. / No prompts yet."}</p>
             </div>
           ) : filtered.map(item => (
             <Card key={item.id} item={item} copiedId={copiedId} onCopy={handleCopy} onOpen={setModal} />
@@ -594,11 +707,18 @@ function AdminLogin({ onLogin, dbPassword }) {
 /* ─────────────────────────────────────────────
    ADMIN DASHBOARD
 ───────────────────────────────────────────── */
+const initialFormState = () => ({
+  title: "",
+  model: "Gemini Nano Banana",
+  medium: "Fotografi",
+  category: DEFAULT_CATEGORIES_BY_MEDIUM.Fotografi[0],
+  description: "",
+  tags: [],
+});
+
 function AdminDashboard({ prompts, fetchPrompts, onLogout }) {
   const [editingId, setEditingId] = useState(null);
-  const [form, setForm] = useState({
-    title: "", model: "Gemini Nano Banana", category: "Woman", description: "", tags: [],
-  });
+  const [form, setForm] = useState(initialFormState());
   const [currentImageUrl, setCurrentImageUrl] = useState("");
   const [selectedFile, setSelectedFile]       = useState(null);
   const [previewUrl, setPreviewUrl]           = useState("");
@@ -607,21 +727,53 @@ function AdminDashboard({ prompts, fetchPrompts, onLogout }) {
   const [isChangingPass, setIsChangingPass]   = useState(false);
   const [newPassword, setNewPassword]         = useState("");
 
-  const cats = [...new Set([...DEFAULT_CATEGORIES.filter(c => c !== "All"), ...prompts.map(p => p.category)])];
+  // Inline "add new category" state
+  const [isAddingCat, setIsAddingCat] = useState(false);
+  const [newCatInput, setNewCatInput] = useState("");
+
+  // Categories scoped to currently selected medium (defaults + user-added)
+  const cats = useMemo(() => {
+    const defaults = DEFAULT_CATEGORIES_BY_MEDIUM[form.medium] || [];
+    const fromPrompts = prompts
+      .filter(p => getMedium(p) === form.medium)
+      .map(p => p.category)
+      .filter(Boolean);
+    return [...new Set([...defaults, ...fromPrompts])];
+  }, [prompts, form.medium]);
+
+  // When medium changes, ensure selected category exists in the new medium's category list
+  useEffect(() => {
+    if (cats.length > 0 && !cats.includes(form.category)) {
+      setForm(f => ({ ...f, category: cats[0] }));
+    }
+    // Cancel any pending "add new" when medium switches
+    setIsAddingCat(false);
+    setNewCatInput("");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.medium]);
 
   /* ── Helpers ── */
   const resetForm = () => {
     setEditingId(null);
-    setForm({ title: "", model: "Gemini Nano Banana", category: "Woman", description: "", tags: [] });
+    setForm(initialFormState());
     setCurrentImageUrl(""); setSelectedFile(null);
     if (previewUrl && !previewUrl.startsWith("/")) URL.revokeObjectURL(previewUrl);
     setPreviewUrl(""); setTagInput("");
+    setIsAddingCat(false); setNewCatInput("");
   };
 
   const startEdit = item => {
     setEditingId(item.id);
-    setForm({ title: item.title, model: item.model || "Gemini Nano Banana", category: item.category, description: item.description, tags: item.tags || [] });
+    setForm({
+      title: item.title,
+      model: item.model || "Gemini Nano Banana",
+      medium: getMedium(item),
+      category: item.category,
+      description: item.description,
+      tags: item.tags || [],
+    });
     setCurrentImageUrl(item.image_url); setSelectedFile(null); setPreviewUrl("");
+    setIsAddingCat(false); setNewCatInput("");
     window.scrollTo({ top: 0 });
   };
 
@@ -640,6 +792,35 @@ function AdminDashboard({ prompts, fetchPrompts, onLogout }) {
     }
   };
 
+  /* ── Category select handler ── */
+  const handleCategoryChange = (e) => {
+    const value = e.target.value;
+    if (value === ADD_NEW_CAT_VALUE) {
+      setIsAddingCat(true);
+      setNewCatInput("");
+    } else {
+      setForm(f => ({ ...f, category: value }));
+    }
+  };
+
+  const confirmNewCategory = () => {
+    const newCat = newCatInput.trim();
+    if (!newCat) {
+      // Empty input: just cancel
+      setIsAddingCat(false);
+      return;
+    }
+    setForm(f => ({ ...f, category: newCat }));
+    setIsAddingCat(false);
+    setNewCatInput("");
+  };
+
+  const cancelNewCategory = () => {
+    setIsAddingCat(false);
+    setNewCatInput("");
+  };
+
+  /* ── Image conversion ── */
   const convertToWebP = (file) =>
     new Promise(resolve => {
       if (file.type === "image/webp") { resolve(file); return; }
@@ -666,6 +847,7 @@ function AdminDashboard({ prompts, fetchPrompts, onLogout }) {
   const handleSubmit = async e => {
     e.preventDefault();
     if (!form.title || !form.description) { alert("Harap isi Judul dan Prompt!"); return; }
+    if (!form.category) { alert("Kategori belum dipilih!"); return; }
     if (!editingId && !selectedFile) { alert("Harap pilih gambar untuk post baru!"); return; }
     setIsUploading(true);
     try {
@@ -678,7 +860,15 @@ function AdminDashboard({ prompts, fetchPrompts, onLogout }) {
         const { data: { publicUrl } } = supabase.storage.from("prompt-images").getPublicUrl(filePath);
         finalImageUrl = publicUrl;
       }
-      const payload = { title: form.title, description: form.description, model: form.model, category: form.category, tags: form.tags, image_url: finalImageUrl };
+      const payload = {
+        title: form.title,
+        description: form.description,
+        model: form.model,
+        medium: form.medium,
+        category: form.category,
+        tags: form.tags,
+        image_url: finalImageUrl,
+      };
       if (editingId) {
         const { error } = await supabase.from("prompts").update(payload).eq("id", editingId);
         if (error) throw error;
@@ -768,11 +958,57 @@ function AdminDashboard({ prompts, fetchPrompts, onLogout }) {
               </label>
             </div>
 
+            {/* MEDIUM */}
             <div className="pv-field">
-              <label className="pv-field-label">Kategori / Category</label>
-              <select className="pv-field-select" value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}>
-                {cats.map(c => <option key={c} value={c}>{c}</option>)}
+              <label className="pv-field-label">Medium <span>— jenis karya</span></label>
+              <select
+                className="pv-field-select"
+                value={form.medium}
+                onChange={e => setForm(f => ({ ...f, medium: e.target.value }))}
+              >
+                {MEDIUMS.map(m => <option key={m} value={m}>{m}</option>)}
               </select>
+            </div>
+
+            {/* CATEGORY — with inline "add new" */}
+            <div className="pv-field">
+              <label className="pv-field-label">
+                Kategori / Category
+                <span>— pilih atau tambah baru</span>
+              </label>
+              {!isAddingCat ? (
+                <select
+                  className="pv-field-select"
+                  value={cats.includes(form.category) ? form.category : ""}
+                  onChange={handleCategoryChange}
+                >
+                  {!cats.includes(form.category) && form.category && (
+                    <option value={form.category}>{form.category} (baru)</option>
+                  )}
+                  {cats.map(c => <option key={c} value={c}>{c}</option>)}
+                  <option value={ADD_NEW_CAT_VALUE}>+ Tambah kategori baru…</option>
+                </select>
+              ) : (
+                <div className="pv-add-cat-row">
+                  <input
+                    autoFocus
+                    type="text"
+                    value={newCatInput}
+                    onChange={e => setNewCatInput(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === "Enter") { e.preventDefault(); confirmNewCategory(); }
+                      if (e.key === "Escape") { e.preventDefault(); cancelNewCategory(); }
+                    }}
+                    placeholder={`Kategori baru untuk ${form.medium}…`}
+                  />
+                  <button type="button" className="pv-add-cat-btn confirm" onClick={confirmNewCategory} title="Tambah">
+                    <Check size={14} />
+                  </button>
+                  <button type="button" className="pv-add-cat-btn cancel" onClick={cancelNewCategory} title="Batal">
+                    <X size={14} />
+                  </button>
+                </div>
+              )}
             </div>
 
             <div className="pv-field">
@@ -829,7 +1065,10 @@ function AdminDashboard({ prompts, fetchPrompts, onLogout }) {
                       <td><img className="pv-row-thumb" src={p.image_url} alt={p.title} loading="lazy" /></td>
                       <td>
                         <div className="pv-row-title">{p.title}</div>
-                        <div className="pv-row-cat">{p.category}</div>
+                        <div className="pv-row-meta">
+                          <span className="pv-row-cat">{p.category}</span>
+                          <span className="pv-row-medium">{getMedium(p)}</span>
+                        </div>
                       </td>
                       <td>
                         <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
