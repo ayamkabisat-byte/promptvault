@@ -2,16 +2,35 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, BarChart3, Check, Edit2, ImagePlus, Lock, LogOut, Plus, Sparkles, Trash2, Upload, X } from "lucide-react";
+import { ArrowLeft, BarChart3, Edit2, ImagePlus, Lock, LogOut, Plus, Sparkles, Trash2, Upload, X } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { getPublicStats } from "@/lib/metrics";
+import { generateAutoTags } from "@/lib/autoTags";
 
-const EMPTY = { title: "", model: "Gemini Nano Banana", medium: "Fotografi", category: "Portrait", description: "", tags: "", status: "published", is_featured: false };
+const EMPTY = { title: "", model: "Gemini Nano Banana", medium: "Fotografi", category: "", description: "", tags: "", status: "published", is_featured: false };
 
 function storagePathFromUrl(url = "") {
   const marker = "/storage/v1/object/public/prompt-images/";
   if (!url.includes(marker)) return null;
   return decodeURIComponent(url.split(marker)[1].split("?")[0]);
+}
+
+function slugify(value = "") {
+  return value
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function parseTags(value = "") {
+  return [...new Set(
+    String(value)
+      .split(",")
+      .map((x) => x.trim().toLowerCase())
+      .filter(Boolean)
+  )];
 }
 
 async function convertToWebP(file) {
@@ -37,6 +56,9 @@ export default function AdminPage() {
   const [password, setPassword] = useState("");
   const [authError, setAuthError] = useState("");
   const [prompts, setPrompts] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [newCategory, setNewCategory] = useState("");
+  const [categorySaving, setCategorySaving] = useState(false);
   const [form, setForm] = useState(EMPTY);
   const [editing, setEditing] = useState(null);
   const [file, setFile] = useState(null);
@@ -51,13 +73,43 @@ export default function AdminPage() {
     if (!error) setPrompts(data || []);
   }, []);
 
+  const fetchCategories = useCallback(async () => {
+    const { data, error } = await supabase
+      .from("prompt_categories")
+      .select("id, medium, name, slug, sort_order, is_active")
+      .order("medium", { ascending: true })
+      .order("sort_order", { ascending: true })
+      .order("name", { ascending: true });
+    if (error) {
+      console.warn("PromptVault category fetch error", error);
+      return;
+    }
+    setCategories(data || []);
+  }, []);
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
     const { data: listener } = supabase.auth.onAuthStateChange((_event, next) => setSession(next));
     return () => listener.subscription.unsubscribe();
   }, []);
 
-  useEffect(() => { if (isAdmin) { fetchPrompts(); getPublicStats().then(setSiteStats); } }, [isAdmin, fetchPrompts]);
+  useEffect(() => {
+    if (isAdmin) {
+      fetchPrompts();
+      fetchCategories();
+      getPublicStats().then(setSiteStats);
+    }
+  }, [isAdmin, fetchPrompts, fetchCategories]);
+
+  const activeCategories = useMemo(
+    () => categories.filter((category) => category.medium === form.medium && category.is_active !== false),
+    [categories, form.medium]
+  );
+
+  useEffect(() => {
+    if (editing || form.category || !activeCategories.length) return;
+    setForm((prev) => ({ ...prev, category: activeCategories[0].name }));
+  }, [activeCategories, editing, form.category]);
 
   const totals = useMemo(() => prompts.reduce((acc, p) => ({
     views: acc.views + Number(p.view_count || 0),
@@ -79,12 +131,83 @@ export default function AdminPage() {
     } catch { setAuthError("Legacy login tidak tersedia."); }
   };
 
-  const reset = () => { setForm(EMPTY); setEditing(null); setFile(null); if (preview) URL.revokeObjectURL(preview); setPreview(""); };
+  const reset = () => {
+    setForm(EMPTY);
+    setEditing(null);
+    setNewCategory("");
+    setFile(null);
+    if (preview) URL.revokeObjectURL(preview);
+    setPreview("");
+  };
 
   const edit = (p) => {
     setEditing(p);
-    setForm({ title: p.title || "", model: p.model || "", medium: p.medium || "Fotografi", category: p.category || "General", description: p.description || "", tags: (p.tags || []).join(", "), status: p.status || "published", is_featured: Boolean(p.is_featured) });
-    setPreview(p.image_url || ""); setFile(null); window.scrollTo({ top: 0, behavior: "smooth" });
+    setForm({
+      title: p.title || "",
+      model: p.model || "",
+      medium: p.medium || "Fotografi",
+      category: p.category || "",
+      description: p.description || "",
+      tags: (p.tags || []).join(", "),
+      status: p.status || "published",
+      is_featured: Boolean(p.is_featured),
+    });
+    setPreview(p.image_url || "");
+    setFile(null);
+    setNewCategory("");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const changeMedium = (nextMedium) => {
+    const first = categories.find((category) => category.medium === nextMedium && category.is_active !== false);
+    setForm((prev) => ({ ...prev, medium: nextMedium, category: first?.name || "" }));
+    setNewCategory("");
+  };
+
+  const addCategory = async () => {
+    const name = newCategory.trim();
+    if (!name) return;
+    const existing = categories.find(
+      (category) => category.medium === form.medium && category.name.toLowerCase() === name.toLowerCase()
+    );
+    if (existing) {
+      setForm((prev) => ({ ...prev, category: existing.name }));
+      setNewCategory("");
+      return;
+    }
+
+    setCategorySaving(true);
+    try {
+      const currentMax = categories
+        .filter((category) => category.medium === form.medium)
+        .reduce((max, category) => Math.max(max, Number(category.sort_order || 0)), 0);
+      const { data, error } = await supabase
+        .from("prompt_categories")
+        .insert([{
+          medium: form.medium,
+          name,
+          slug: slugify(name) || `category-${Date.now()}`,
+          sort_order: currentMax + 1,
+          is_active: true,
+        }])
+        .select("id, medium, name, slug, sort_order, is_active")
+        .single();
+      if (error) throw error;
+      setCategories((prev) => [...prev, data]);
+      setForm((prev) => ({ ...prev, category: data.name }));
+      setNewCategory("");
+    } catch (error) {
+      alert(`Gagal menambah category: ${error.message}`);
+    } finally {
+      setCategorySaving(false);
+    }
+  };
+
+  const applyAutoTags = () => {
+    const existing = parseTags(form.tags);
+    const generated = generateAutoTags(form, 18);
+    const merged = [...new Set([...existing, ...generated])].slice(0, 20);
+    setForm((prev) => ({ ...prev, tags: merged.join(", ") }));
   };
 
   const uploadImage = async () => {
@@ -99,12 +222,22 @@ export default function AdminPage() {
   const save = async (e) => {
     e.preventDefault();
     if (!form.title.trim() || !form.description.trim()) return alert("Title dan prompt wajib diisi.");
+    if (!form.category.trim()) return alert("Category wajib dipilih atau dibuat terlebih dahulu.");
     if (!editing && !file) return alert("Image wajib untuk prompt baru.");
     setSaving(true);
     try {
       const oldImage = editing?.image_url || "";
       const imageUrl = await uploadImage();
-      const basePayload = { title: form.title.trim(), model: form.model.trim(), medium: form.medium, category: form.category.trim(), description: form.description.trim(), tags: form.tags.split(",").map((x) => x.trim().toLowerCase()).filter(Boolean), image_url: imageUrl };
+      const tags = form.tags.trim() ? parseTags(form.tags) : generateAutoTags(form, 18);
+      const basePayload = {
+        title: form.title.trim(),
+        model: form.model.trim(),
+        medium: form.medium,
+        category: form.category.trim(),
+        description: form.description.trim(),
+        tags,
+        image_url: imageUrl,
+      };
       const v2Payload = { ...basePayload, status: form.status, is_featured: form.is_featured };
       let result = editing
         ? await supabase.from("prompts").update(v2Payload).eq("id", editing.id)
@@ -116,22 +249,31 @@ export default function AdminPage() {
       }
       if (result.error) throw result.error;
       if (file && oldImage && oldImage !== imageUrl) {
-        const path = storagePathFromUrl(oldImage); if (path) await supabase.storage.from("prompt-images").remove([path]);
+        const path = storagePathFromUrl(oldImage);
+        if (path) await supabase.storage.from("prompt-images").remove([path]);
       }
-      reset(); await fetchPrompts();
-    } catch (error) { alert(`Gagal menyimpan: ${error.message}`); }
-    finally { setSaving(false); }
+      reset();
+      await fetchPrompts();
+    } catch (error) {
+      alert(`Gagal menyimpan: ${error.message}`);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const remove = async (p) => {
     if (!confirm(`Hapus “${p.title}” permanen?`)) return;
     const { error } = await supabase.from("prompts").delete().eq("id", p.id);
     if (error) return alert(error.message);
-    const path = storagePathFromUrl(p.image_url); if (path) await supabase.storage.from("prompt-images").remove([path]);
+    const path = storagePathFromUrl(p.image_url);
+    if (path) await supabase.storage.from("prompt-images").remove([path]);
     fetchPrompts();
   };
 
-  const logout = async () => { if (session) await supabase.auth.signOut(); setLegacyAuthed(false); };
+  const logout = async () => {
+    if (session) await supabase.auth.signOut();
+    setLegacyAuthed(false);
+  };
 
   if (!isAdmin) return (
     <main className="pv2-admin-login">
@@ -150,7 +292,11 @@ export default function AdminPage() {
 
   return (
     <main className="pv2-admin-shell">
-      <header className="pv2-admin-header"><div><Link href="/"><ArrowLeft size={14} /> Gallery</Link><h1>PromptVault <span>Studio</span></h1></div><button onClick={logout}><LogOut size={14} /> Sign out</button></header>
+      <header className="pv2-admin-header">
+        <div><Link href="/"><ArrowLeft size={14} /> Gallery</Link><h1>PromptVault <span>Studio</span></h1></div>
+        <button onClick={logout}><LogOut size={14} /> Sign out</button>
+      </header>
+
       <section className="pv2-admin-stats">
         <div><BarChart3 size={16} /><strong>{prompts.length}</strong><span>Prompts</span></div>
         <div><strong>{totals.views.toLocaleString()}</strong><span>Prompt views</span></div>
@@ -162,19 +308,67 @@ export default function AdminPage() {
 
       <div className="pv2-admin-grid">
         <form className="pv2-admin-form" onSubmit={save}>
-          <div className="pv2-admin-form-head"><h2>{editing ? <><Edit2 size={16} /> Edit prompt</> : <><Plus size={16} /> New prompt</>}</h2>{editing && <button type="button" onClick={reset}><X size={14} /> Cancel</button>}</div>
+          <div className="pv2-admin-form-head">
+            <h2>{editing ? <><Edit2 size={16} /> Edit prompt</> : <><Plus size={16} /> New prompt</>}</h2>
+            {editing && <button type="button" onClick={reset}><X size={14} /> Cancel</button>}
+          </div>
+
           <label>Title<input className="pv2-field" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></label>
-          <div className="pv2-form-row"><label>Model<input className="pv2-field" value={form.model} onChange={(e) => setForm({ ...form, model: e.target.value })} /></label><label>Medium<select className="pv2-field" value={form.medium} onChange={(e) => setForm({ ...form, medium: e.target.value })}><option>Fotografi</option><option>Graphic</option><option>Ilustrasi</option></select></label></div>
-          <label>Category<input className="pv2-field" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} /></label>
+
+          <div className="pv2-form-row">
+            <label>Model<input className="pv2-field" value={form.model} onChange={(e) => setForm({ ...form, model: e.target.value })} /></label>
+            <label>Medium
+              <select className="pv2-field" value={form.medium} onChange={(e) => changeMedium(e.target.value)}>
+                <option>Fotografi</option><option>Graphic</option><option>Ilustrasi</option>
+              </select>
+            </label>
+          </div>
+
+          <div className="pv2-field-group">
+            <div className="pv2-field-label-row"><span>Category</span><small>{activeCategories.length} saved</small></div>
+            <select className="pv2-field" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
+              {!activeCategories.length && <option value="">No category yet</option>}
+              {activeCategories.map((category) => <option key={category.id} value={category.name}>{category.name}</option>)}
+            </select>
+            <div className="pv2-category-add-row">
+              <input
+                className="pv2-field"
+                value={newCategory}
+                onChange={(e) => setNewCategory(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCategory(); } }}
+                placeholder={`Add ${form.medium} category…`}
+              />
+              <button type="button" onClick={addCategory} disabled={categorySaving || !newCategory.trim()}>
+                <Plus size={13} /> {categorySaving ? "Adding…" : "Add"}
+              </button>
+            </div>
+          </div>
+
           <label>Prompt<textarea className="pv2-field" rows={7} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></label>
-          <label>Tags<input className="pv2-field" value={form.tags} onChange={(e) => setForm({ ...form, tags: e.target.value })} placeholder="cinematic, portrait, flash" /></label>
-          <div className="pv2-form-row"><label>Status<select className="pv2-field" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}><option value="published">Published</option><option value="draft">Draft</option></select></label><label className="pv2-check"><input type="checkbox" checked={form.is_featured} onChange={(e) => setForm({ ...form, is_featured: e.target.checked })} /><Sparkles size={14} /> Featured</label></div>
+
+          <div className="pv2-field-group">
+            <div className="pv2-field-label-row">
+              <span>Tags</span>
+              <button type="button" className="pv2-auto-tags" onClick={applyAutoTags}><Sparkles size={12} /> Auto Tags</button>
+            </div>
+            <input className="pv2-field" value={form.tags} onChange={(e) => setForm({ ...form, tags: e.target.value })} placeholder="cinematic, portrait, flash" />
+            <small className="pv2-field-help">Auto Tags membaca title, prompt, category, medium, dan model. Tetap bisa diedit manual.</small>
+          </div>
+
+          <div className="pv2-form-row">
+            <label>Status<select className="pv2-field" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}><option value="published">Published</option><option value="draft">Draft</option></select></label>
+            <label className="pv2-check"><input type="checkbox" checked={form.is_featured} onChange={(e) => setForm({ ...form, is_featured: e.target.checked })} /><Sparkles size={14} /> Featured</label>
+          </div>
+
           <label className="pv2-upload"><ImagePlus size={22} /><span>{file ? file.name : editing ? "Replace image (optional)" : "Choose image"}</span><input type="file" accept="image/*" hidden onChange={(e) => { const next = e.target.files?.[0]; if (!next) return; setFile(next); if (preview && preview.startsWith("blob:")) URL.revokeObjectURL(preview); setPreview(URL.createObjectURL(next)); }} /></label>
           {preview && <img className="pv2-admin-preview" src={preview} alt="Preview" />}
           <button className="pv2-primary-btn wide" disabled={saving}>{saving ? "Saving…" : <><Upload size={15} /> {editing ? "Save changes" : "Publish prompt"}</>}</button>
         </form>
 
-        <section className="pv2-admin-list"><div className="pv2-admin-list-head"><h2>Prompt catalog</h2><span>{prompts.length} items</span></div>{prompts.map((p) => <article key={p.id} className="pv2-admin-row"><img src={p.image_url} alt="" /><div className="grow"><strong>{p.title}</strong><span>{p.medium || "Fotografi"} · {p.category} · {p.model || "AI"}</span><small>{p.status || "published"}{p.is_featured ? " · featured" : ""}</small></div><button onClick={() => edit(p)}><Edit2 size={14} /></button><button className="danger" onClick={() => remove(p)}><Trash2 size={14} /></button></article>)}</section>
+        <section className="pv2-admin-list">
+          <div className="pv2-admin-list-head"><h2>Prompt catalog</h2><span>{prompts.length} items</span></div>
+          {prompts.map((p) => <article key={p.id} className="pv2-admin-row"><img src={p.image_url} alt="" /><div className="grow"><strong>{p.title}</strong><span>{p.medium || "Fotografi"} · {p.category} · {p.model || "AI"}</span><small>{p.status || "published"}{p.is_featured ? " · featured" : ""}</small></div><button onClick={() => edit(p)}><Edit2 size={14} /></button><button className="danger" onClick={() => remove(p)}><Trash2 size={14} /></button></article>)}
+        </section>
       </div>
     </main>
   );
