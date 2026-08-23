@@ -48,25 +48,15 @@ on public.prompts for delete to authenticated
 using (public.is_promptvault_admin());
 
 -- SETTINGS: legacy password is no longer exposed to anonymous clients.
-if to_regclass('public.settings') is not null then
-  alter table public.settings enable row level security;
-end if;
-
 do $$
 declare p record;
 begin
   if to_regclass('public.settings') is not null then
+    execute 'alter table public.settings enable row level security';
     for p in select policyname from pg_policies where schemaname='public' and tablename='settings'
     loop
       execute format('drop policy if exists %I on public.settings', p.policyname);
     end loop;
-  end if;
-end $$;
-
--- PostgreSQL does not allow CREATE POLICY inside the IF above, so create it only when table exists.
-do $$
-begin
-  if to_regclass('public.settings') is not null then
     execute 'create policy "admin settings only" on public.settings for all to authenticated using (public.is_promptvault_admin()) with check (public.is_promptvault_admin())';
   end if;
 end $$;
