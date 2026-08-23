@@ -1,0 +1,33 @@
+/* Keep the sticky desktop editor usable on short viewports. */
+@media (min-width: 981px) {
+  .pv2-admin-form {
+    max-height: calc(100dvh - 36px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+  }
+
+  .pv2-admin-form::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .pv2-admin-form::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .pv2-admin-form::-webkit-scrollbar-thumb {
+    background: #2b2d35;
+    border-radius: 999px;
+  }
+
+  .pv2-admin-form::-webkit-scrollbar-thumb:hover {
+    background: #3a3d47;
+  }
+}
+
+@media (min-width: 981px) and (max-height: 760px) {
+  .pv2-admin-form {
+    top: 10px;
+    max-height: calc(100dvh - 20px);
+  }
+}
