@@ -2,40 +2,61 @@
 
 import { Check, Copy, Eye, Heart, Sparkles } from "lucide-react";
 
-const compact = (value = 0) => new Intl.NumberFormat("en", { notation: "compact", maximumFractionDigits: 1 }).format(Number(value || 0));
+const compact = (value = 0) => new Intl.NumberFormat("en", {
+  notation: "compact",
+  maximumFractionDigits: 1,
+}).format(Number(value || 0));
 
-export default function PromptCard({ item, copied, favorite, onCopy, onFavorite, onOpen }) {
+const RATIO_LABEL = {
+  tall: "9:16",
+  portrait: "3:4",
+  compact: "4:5",
+  square: "1:1",
+};
+
+export default function PromptCard({ item, layout = "portrait", copied, favorite, onCopy, onFavorite, onOpen }) {
   return (
-    <article className="pv2-card" onClick={() => onOpen(item)}>
+    <article className={`pv2-card pv2-card-${layout}`} data-layout={layout} onClick={() => onOpen(item)}>
       <div className="pv2-card-media">
         <img src={item.image_url} alt={item.title} loading="lazy" />
-        <div className="pv2-card-shade" />
+        <div className="pv2-card-hover-shade" />
+
         <div className="pv2-card-topline">
-          <span className="pv2-chip">{item.model || "AI Visual"}</span>
-          {item.is_featured && <span className="pv2-chip pv2-chip-featured"><Sparkles size={11} /> Featured</span>}
+          <span className="pv2-ratio-badge">{RATIO_LABEL[layout] || "3:4"}</span>
+          {item.is_featured && (
+            <span className="pv2-chip pv2-chip-featured"><Sparkles size={11} /> Featured</span>
+          )}
         </div>
+
         <div className="pv2-card-actions">
-          <button className={`pv2-icon-btn ${favorite ? "active" : ""}`} onClick={(e) => { e.stopPropagation(); onFavorite(item); }} aria-label="Favorite">
+          <button
+            className={`pv2-icon-btn ${favorite ? "active" : ""}`}
+            onClick={(e) => { e.stopPropagation(); onFavorite(item); }}
+            aria-label="Favorite"
+          >
             <Heart size={15} fill={favorite ? "currentColor" : "none"} />
           </button>
-          <button className={`pv2-icon-btn ${copied ? "success" : ""}`} onClick={(e) => { e.stopPropagation(); onCopy(item); }} aria-label="Copy prompt">
+          <button
+            className={`pv2-icon-btn ${copied ? "success" : ""}`}
+            onClick={(e) => { e.stopPropagation(); onCopy(item); }}
+            aria-label="Copy prompt"
+          >
             {copied ? <Check size={15} /> : <Copy size={15} />}
           </button>
         </div>
-        <div className="pv2-card-caption">
-          <div className="pv2-card-category">{item.medium || "Fotografi"} · {item.category || "General"}</div>
-          <h3>{item.title}</h3>
-          <p>{item.description}</p>
-        </div>
       </div>
-      <div className="pv2-card-meta">
-        <div className="pv2-card-tags">
-          {(item.tags || []).slice(0, 2).map((tag) => <span key={tag}>#{tag}</span>)}
+
+      <div className="pv2-gallery-card-info">
+        <div className="pv2-gallery-card-title-row">
+          <h3>{item.title}</h3>
+          <div className="pv2-card-metrics">
+            <span><Heart size={11} /> {compact(item.favorite_count)}</span>
+            <span><Eye size={11} /> {compact(item.view_count)}</span>
+          </div>
         </div>
-        <div className="pv2-card-metrics">
-          <span><Eye size={12} /> {compact(item.view_count)}</span>
-          <span><Copy size={12} /> {compact(item.copy_count)}</span>
-          <span><Heart size={12} /> {compact(item.favorite_count)}</span>
+        <div className="pv2-gallery-card-subline">
+          <span>{item.medium || "Fotografi"} · {item.category || "General"}</span>
+          <span>{item.model || "AI Visual"}</span>
         </div>
       </div>
     </article>
