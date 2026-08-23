@@ -1,22 +1,27 @@
+import { DM_Sans, DM_Serif_Display } from "next/font/google";
 import "./globals.css";
 
+const dmSans = DM_Sans({ subsets: ["latin"], variable: "--font-sans", display: "swap" });
+const dmSerif = DM_Serif_Display({ subsets: ["latin"], weight: "400", variable: "--font-display", display: "swap" });
+
 export const metadata = {
-  title: "PromptVault — AI Visual Gallery",
-  description: "Koleksi prompt visual terbaik untuk proyek kreasi AI Anda.",
+  title: {
+    default: "PromptVault — Curated AI Prompt Library",
+    template: "%s · PromptVault",
+  },
+  description: "Discover, copy, save, and share curated AI visual prompts for photography, graphic design, illustration, and generative workflows.",
+  metadataBase: new URL("https://promptkeren.vercel.app"),
+  openGraph: {
+    title: "PromptVault — Curated AI Prompt Library",
+    description: "A dynamic visual library for discovering and reusing AI prompts.",
+    type: "website",
+  },
 };
 
 export default function RootLayout({ children }) {
   return (
     <html lang="id">
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Serif+Display:ital@0;1&display=swap"
-          rel="stylesheet"
-        />
-      </head>
-      <body className="antialiased">{children}</body>
+      <body className={`${dmSans.variable} ${dmSerif.variable}`}>{children}</body>
     </html>
   );
 }
