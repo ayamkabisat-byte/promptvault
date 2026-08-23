@@ -14,7 +14,6 @@ alter table public.prompts add column if not exists updated_at timestamptz not n
 
 update public.prompts set status = 'published' where status is null;
 
--- Avoid a named CHECK collision when rerunning manually.
 do $$
 begin
   if not exists (
@@ -26,12 +25,11 @@ begin
   end if;
 end $$;
 
--- 2) Dedicated admin allow-list. Public signup should stay disabled.
+-- 2) Dedicated admin allow-list. Keep public signup disabled.
 create table if not exists public.promptvault_admins (
   user_id uuid primary key references auth.users(id) on delete cascade,
   created_at timestamptz not null default now()
 );
-
 alter table public.promptvault_admins enable row level security;
 
 create or replace function public.is_promptvault_admin()
@@ -41,12 +39,8 @@ stable
 security definer
 set search_path = public
 as $$
-  select exists (
-    select 1 from public.promptvault_admins
-    where user_id = auth.uid()
-  );
+  select exists (select 1 from public.promptvault_admins where user_id = auth.uid());
 $$;
-
 grant execute on function public.is_promptvault_admin() to authenticated;
 
 -- 3) Public traffic counters. visitor_key is a random browser ID, not PII.
@@ -56,18 +50,15 @@ create table if not exists public.site_visitors (
   last_seen timestamptz not null default now(),
   visits bigint not null default 1
 );
-
 create table if not exists public.site_stats (
   id smallint primary key default 1 check (id = 1),
   total_views bigint not null default 0,
   unique_visitors bigint not null default 0,
   updated_at timestamptz not null default now()
 );
-
 insert into public.site_stats (id, total_views, unique_visitors)
 values (1, 0, 0)
 on conflict (id) do nothing;
-
 alter table public.site_visitors enable row level security;
 alter table public.site_stats enable row level security;
 
@@ -77,8 +68,6 @@ language plpgsql
 security definer
 set search_path = public
 as $$
-declare
-  is_new boolean := false;
 begin
   if visitor_key is null or length(visitor_key) < 8 or length(visitor_key) > 128 then
     return query select s.total_views, s.unique_visitors from public.site_stats s where s.id = 1;
@@ -90,8 +79,6 @@ begin
   on conflict (visitor_key) do update
     set last_seen = now(), visits = public.site_visitors.visits + 1;
 
-  get diagnostics is_new = row_count;
-  -- row_count cannot distinguish insert/update, so recompute exact unique count below.
   update public.site_stats
     set total_views = total_views + 1,
         unique_visitors = (select count(*) from public.site_visitors),
@@ -111,11 +98,10 @@ set search_path = public
 as $$
   select s.total_views, s.unique_visitors from public.site_stats s where s.id = 1;
 $$;
-
 grant execute on function public.track_site_visit(text) to anon, authenticated;
 grant execute on function public.get_public_stats() to anon, authenticated;
 
--- 4) Atomic engagement counter RPC. Works regardless of prompts.id type by comparing id::text.
+-- 4) Atomic engagement counter RPC. Compatible with UUID, bigint, or text prompt IDs.
 create or replace function public.increment_prompt_metric(prompt_id_input text, metric_input text)
 returns table(view_count bigint, copy_count bigint, favorite_count bigint)
 language plpgsql
@@ -140,12 +126,10 @@ begin
     from public.prompts p where p.id::text = prompt_id_input;
 end;
 $$;
-
 grant execute on function public.increment_prompt_metric(text, text) to anon, authenticated;
 
--- 5) Prompt RLS: public can only read published rows; only allow-listed admins can write.
+-- 5) Prompt RLS: public reads published rows; only allow-listed admins can write.
 alter table public.prompts enable row level security;
-
 do $$
 declare p record;
 begin
@@ -159,26 +143,21 @@ create policy "public read published prompts"
 on public.prompts for select
 to anon, authenticated
 using (status = 'published' or public.is_promptvault_admin());
-
 create policy "admin insert prompts"
 on public.prompts for insert
 to authenticated
 with check (public.is_promptvault_admin());
-
 create policy "admin update prompts"
 on public.prompts for update
 to authenticated
-using (public.is_promptvault_admin())
-with check (public.is_promptvault_admin());
-
+using (public.is_promptvault_admin()) with check (public.is_promptvault_admin());
 create policy "admin delete prompts"
 on public.prompts for delete
 to authenticated
 using (public.is_promptvault_admin());
 
--- 6) Settings: stop exposing the legacy admin password to anon after migration.
+-- 6) Settings: stop exposing legacy admin password to anon after migration.
 alter table if exists public.settings enable row level security;
-
 do $$
 declare p record;
 begin
@@ -191,39 +170,21 @@ begin
   end if;
 end $$;
 
--- 7) Storage policies for prompt-images. These names are safe to rerun.
--- IMPORTANT: review any older permissive storage.objects policies in Supabase Dashboard and remove them if they allow anon writes.
+-- 7) Storage. Review older policies separately because permissive policies combine with OR.
 drop policy if exists "promptvault public images" on storage.objects;
 drop policy if exists "promptvault admin upload" on storage.objects;
 drop policy if exists "promptvault admin update" on storage.objects;
 drop policy if exists "promptvault admin delete" on storage.objects;
-
-create policy "promptvault public images"
-on storage.objects for select
-to public
-using (bucket_id = 'prompt-images');
-
-create policy "promptvault admin upload"
-on storage.objects for insert
-to authenticated
-with check (bucket_id = 'prompt-images' and public.is_promptvault_admin());
-
-create policy "promptvault admin update"
-on storage.objects for update
-to authenticated
-using (bucket_id = 'prompt-images' and public.is_promptvault_admin())
-with check (bucket_id = 'prompt-images' and public.is_promptvault_admin());
-
-create policy "promptvault admin delete"
-on storage.objects for delete
-to authenticated
-using (bucket_id = 'prompt-images' and public.is_promptvault_admin());
+create policy "promptvault public images" on storage.objects for select to public using (bucket_id = 'prompt-images');
+create policy "promptvault admin upload" on storage.objects for insert to authenticated with check (bucket_id = 'prompt-images' and public.is_promptvault_admin());
+create policy "promptvault admin update" on storage.objects for update to authenticated using (bucket_id = 'prompt-images' and public.is_promptvault_admin()) with check (bucket_id = 'prompt-images' and public.is_promptvault_admin());
+create policy "promptvault admin delete" on storage.objects for delete to authenticated using (bucket_id = 'prompt-images' and public.is_promptvault_admin());
 
 commit;
 
 -- BOOTSTRAP AFTER THIS MIGRATION:
 -- 1. Supabase Dashboard > Authentication > Users > create your admin user.
--- 2. Copy that user's UUID and run:
+-- 2. Copy the user's UUID and run:
 --    insert into public.promptvault_admins(user_id) values ('YOUR-AUTH-USER-UUID') on conflict do nothing;
 -- 3. Disable public email signups in Authentication settings.
--- 4. Verify Storage > Policies has no older anon INSERT/UPDATE/DELETE policies for prompt-images.
+-- 4. Storage > Policies: remove older anon INSERT/UPDATE/DELETE policies for prompt-images.
