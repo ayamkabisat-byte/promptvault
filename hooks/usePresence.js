@@ -15,7 +15,7 @@ const getVisitorId = () => {
 };
 
 export function usePresence() {
-  const [online, setOnline] = useState(1);
+  const [online, setOnline] = useState(0);
   const visitorId = useMemo(() => (typeof window !== "undefined" ? getVisitorId() : "server"), []);
 
   useEffect(() => {
@@ -27,8 +27,7 @@ export function usePresence() {
 
     channel
       .on("presence", { event: "sync" }, () => {
-        const state = channel.presenceState();
-        setOnline(Math.max(1, Object.keys(state).length));
+        setOnline(Object.keys(channel.presenceState()).length);
       })
       .subscribe(async (status) => {
         if (status === "SUBSCRIBED") {
@@ -39,6 +38,7 @@ export function usePresence() {
     return () => {
       channel.untrack().catch(() => {});
       supabase.removeChannel(channel);
+      setOnline(0);
     };
   }, [visitorId]);
 
