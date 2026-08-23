@@ -1,36 +1,82 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# PromptVault v2
 
-## Getting Started
+PromptVault is a curated AI visual prompt library built with Next.js, Supabase, and Vercel.
 
-First, run the development server:
+## v2 highlights
+
+- Modern dynamic masonry gallery inspired by contemporary AI prompt discovery products.
+- Featured / Newest / Popular sorting.
+- Search, medium filters, and AI-model filters.
+- Prompt drawer + shareable `/prompt/[id]` detail pages.
+- Views, copies, favorites, and engagement-based popularity.
+- Public visitor / visit counters.
+- Realtime `online now` counter using Supabase Realtime Presence.
+- Local browser favorites without requiring user accounts.
+- New admin studio with Supabase Auth support.
+- Draft / Published and Featured controls.
+- WebP image resize/compression before upload.
+- Old Storage image cleanup after replace/delete.
+- RLS migration for public-read / admin-write security.
+
+## Environment
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+NEXT_PUBLIC_SUPABASE_URL=...
+NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The anon key is expected in the browser. Security must be enforced with Supabase RLS, not by hiding the anon key.
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+## Supabase v2 migration
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+The migration is committed at:
 
-## Learn More
+```text
+supabase/migrations/20260823_promptvault_v2.sql
+```
 
-To learn more about Next.js, take a look at the following resources:
+Run it once in **Supabase Dashboard → SQL Editor**.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+It adds:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- `view_count`, `copy_count`, `favorite_count`
+- `is_featured`
+- `status` (`published` / `draft`)
+- visitor and aggregate site-stat tables
+- RPCs for public counters
+- Prompt RLS policies
+- admin allow-list table
+- Storage policies for `prompt-images`
 
-## Deploy on Vercel
+### Admin bootstrap after migration
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+1. Open **Supabase Dashboard → Authentication → Users**.
+2. Create your admin email/password user.
+3. Copy the Auth user UUID.
+4. Run:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```sql
+insert into public.promptvault_admins(user_id)
+values ('YOUR-AUTH-USER-UUID')
+on conflict do nothing;
+```
+
+5. Disable public email signups in Supabase Auth settings.
+6. Review **Storage → Policies** and remove any older policies that still allow anon INSERT / UPDATE / DELETE on `prompt-images`.
+
+Before the migration is run, `/admin` still supports the legacy dashboard password by leaving the email field empty. After the migration removes anon access to `settings`, use Supabase Auth.
+
+## Visitor analytics semantics
+
+- **Visitors**: unique browser IDs stored in localStorage. It is an approximation of unique devices/browsers, not guaranteed unique humans.
+- **Visits**: one tracked visit per browser tab/session in the current frontend implementation.
+- **Online now**: live connected clients in the `promptvault-online` Supabase Presence channel.
+
+## Development
+
+```bash
+npm install
+npm run dev
+```
+
+Production is deployed through the repository's Vercel Git integration.
