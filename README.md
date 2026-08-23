@@ -4,19 +4,17 @@ PromptVault is a curated AI visual prompt library built with Next.js, Supabase, 
 
 ## v2 highlights
 
-- Modern dynamic masonry gallery inspired by contemporary AI prompt discovery products.
+- Modern responsive masonry gallery.
 - Featured / Newest / Popular sorting.
 - Search, medium filters, and AI-model filters.
 - Prompt drawer + shareable `/prompt/[id]` detail pages.
 - Views, copies, favorites, and engagement-based popularity.
-- Public visitor / visit counters.
-- Realtime `online now` counter using Supabase Realtime Presence.
-- Local browser favorites without requiring user accounts.
-- New admin studio with Supabase Auth support.
+- Visitor / visit counters.
+- Realtime `online now` using Supabase Realtime Presence.
+- Local browser favorites without requiring visitor accounts.
+- New `/admin` studio with Supabase Auth support.
 - Draft / Published and Featured controls.
-- WebP image resize/compression before upload.
-- Old Storage image cleanup after replace/delete.
-- RLS migration for public-read / admin-write security.
+- WebP resize/compression before upload and Storage cleanup after replace/delete.
 
 ## Environment
 
@@ -25,35 +23,30 @@ NEXT_PUBLIC_SUPABASE_URL=...
 NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 ```
 
-The anon key is expected in the browser. Security must be enforced with Supabase RLS, not by hiding the anon key.
+The anon/publishable key is expected in the browser. Authorization is enforced with RLS, not by hiding a frontend key.
 
-## Supabase v2 migration
+## Supabase rollout: two phases
 
-The migration is committed at:
+PromptVault v2 intentionally separates analytics/schema changes from the final security cutover so an existing legacy admin cannot be locked out accidentally.
+
+### Phase A — analytics + schema foundation
+
+File:
 
 ```text
 supabase/migrations/20260823_promptvault_v2.sql
 ```
 
-Run it once in **Supabase Dashboard → SQL Editor**.
+Adds engagement columns, visitor tables, public counter RPCs, and the Auth admin allow-list foundation. It does **not** remove legacy prompt/settings/storage policies.
 
-It adds:
+For the current production PromptVault project, Phase A has already been applied.
 
-- `view_count`, `copy_count`, `favorite_count`
-- `is_featured`
-- `status` (`published` / `draft`)
-- visitor and aggregate site-stat tables
-- RPCs for public counters
-- Prompt RLS policies
-- admin allow-list table
-- Storage policies for `prompt-images`
-
-### Admin bootstrap after migration
+### Create the Auth admin before Phase B
 
 1. Open **Supabase Dashboard → Authentication → Users**.
-2. Create your admin email/password user.
-3. Copy the Auth user UUID.
-4. Run:
+2. Create one admin email/password user. Do not enable public signup just for this.
+3. Copy that Auth user's UUID.
+4. Insert it into the allow-list:
 
 ```sql
 insert into public.promptvault_admins(user_id)
@@ -61,16 +54,42 @@ values ('YOUR-AUTH-USER-UUID')
 on conflict do nothing;
 ```
 
-5. Disable public email signups in Supabase Auth settings.
-6. Review **Storage → Policies** and remove any older policies that still allow anon INSERT / UPDATE / DELETE on `prompt-images`.
+5. Verify it exists:
 
-Before the migration is run, `/admin` still supports the legacy dashboard password by leaving the email field empty. After the migration removes anon access to `settings`, use Supabase Auth.
+```sql
+select user_id, created_at from public.promptvault_admins;
+```
 
-## Visitor analytics semantics
+### Phase B — security cutover
 
-- **Visitors**: unique browser IDs stored in localStorage. It is an approximation of unique devices/browsers, not guaranteed unique humans.
-- **Visits**: one tracked visit per browser tab/session in the current frontend implementation.
-- **Online now**: live connected clients in the `promptvault-online` Supabase Presence channel.
+File:
+
+```text
+supabase/migrations/20260823_promptvault_v2_phase_b_security.sql
+```
+
+Phase B removes the legacy public INSERT/UPDATE/DELETE policies, locks the legacy `settings` table behind the authenticated admin allow-list, and changes `prompt-images` Storage to public-read/admin-write.
+
+The migration has a guard and **aborts automatically if `promptvault_admins` is empty**. Do not bypass that guard.
+
+After Phase B, `/admin` should use Supabase Auth email/password. The legacy password fallback will no longer be able to read `settings` anonymously.
+
+## Analytics semantics
+
+- **Visitors**: unique browser IDs stored in localStorage. This approximates unique devices/browsers; it is not guaranteed to equal unique humans.
+- **Visits**: one tracked visit per browser tab/session in the current frontend.
+- **Online now**: connected clients currently present in the `promptvault-online` Supabase Presence channel.
+- **Prompt views**: prompt opens/detail views.
+- **Copies**: successful prompt-copy actions.
+- **Favorites**: local-browser save state with an aggregate public counter.
+
+Public metric functions intentionally expose only narrowly scoped counter operations. Direct visitor/stat tables remain inaccessible to anon/authenticated clients.
+
+## Security notes
+
+The old production database historically contained permissive public write policies for `prompts` and `prompt-images`. Phase B is the required final hardening step after an Auth admin exists.
+
+After applying Phase B, run Supabase Security and Performance Advisors and confirm there are no unexpected anonymous write policies.
 
 ## Development
 
@@ -79,4 +98,4 @@ npm install
 npm run dev
 ```
 
-Production is deployed through the repository's Vercel Git integration.
+Production deploys through the repository's Vercel Git integration.
