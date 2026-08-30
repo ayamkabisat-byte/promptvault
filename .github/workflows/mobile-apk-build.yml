@@ -47,9 +47,6 @@ jobs:
       - name: Generate Android project
         run: npx expo prebuild --platform android --clean --non-interactive
 
-      # IMPORTANT: assembleDebug expects the Metro dev server and does not embed
-      # the production JS bundle. assembleRelease packages the JS/Hermes bundle
-      # inside the APK so it can run standalone on a physical phone.
       - name: Build standalone release APK
         run: |
           chmod +x android/gradlew
@@ -70,13 +67,13 @@ jobs:
       - name: Collect APK
         run: |
           mkdir -p dist-apk
-          cp android/app/build/outputs/apk/release/app-release.apk dist-apk/PromptVault-v0.1.1-standalone.apk
+          cp android/app/build/outputs/apk/release/app-release.apk dist-apk/PromptVault-v0.1.2-standalone.apk
           ls -lh dist-apk/
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: PromptVault-Android-Standalone-APK
-          path: mobile/dist-apk/PromptVault-v0.1.1-standalone.apk
+          name: PromptVault-Android-v0.1.2
+          path: mobile/dist-apk/PromptVault-v0.1.2-standalone.apk
           if-no-files-found: error
           retention-days: 14

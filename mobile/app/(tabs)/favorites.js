@@ -1,4 +1,5 @@
-import { FlatList, Image, Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { colors } from '../../lib/theme';
 import { useFavorites } from '../../context/FavoritesContext';
@@ -8,7 +9,7 @@ export default function FavoritesScreen() {
   const { items, toggle } = useFavorites();
 
   return (
-    <SafeAreaView style={styles.screen}>
+    <SafeAreaView edges={['top']} style={styles.screen}>
       <View style={styles.header}>
         <Text style={styles.title}>Favorites</Text>
         <Text style={styles.subtitle}>Saved for this app session · persistent storage comes next.</Text>
@@ -41,7 +42,7 @@ export default function FavoritesScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
-  header: { paddingHorizontal: 14, paddingTop: 16, paddingBottom: 14 },
+  header: { paddingHorizontal: 14, paddingTop: 10, paddingBottom: 14 },
   title: { color: colors.text, fontSize: 30, fontWeight: '900', letterSpacing: -1 },
   subtitle: { color: colors.muted, fontSize: 11, marginTop: 4 },
   list: { paddingHorizontal: 10, paddingBottom: 24 },
