@@ -1,0 +1,66 @@
+name: Mobile APK Build
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - mobile-expo-v1
+    paths:
+      - 'mobile/**'
+      - '.github/workflows/mobile-apk-build.yml'
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: mobile
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.19.5
+          cache: npm
+          cache-dependency-path: mobile/package.json
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Validate Expo dependencies
+        run: npx expo install --check
+
+      - name: Generate Android project
+        run: npx expo prebuild --platform android --clean --non-interactive
+
+      - name: Build debug APK
+        run: |
+          chmod +x android/gradlew
+          cd android
+          ./gradlew assembleDebug --no-daemon
+
+      - name: Collect APK
+        run: |
+          mkdir -p dist-apk
+          cp android/app/build/outputs/apk/debug/app-debug.apk dist-apk/PromptVault-v0.1.0-debug.apk
+          ls -lh dist-apk/
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: PromptVault-Android-APK
+          path: mobile/dist-apk/PromptVault-v0.1.0-debug.apk
+          if-no-files-found: error
+          retention-days: 14
