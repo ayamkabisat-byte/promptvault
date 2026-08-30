@@ -6,12 +6,10 @@
     "orientation": "portrait",
     "scheme": "promptvault",
     "userInterfaceStyle": "dark",
-    "newArchEnabled": true,
     "plugins": ["expo-router"],
     "android": {
       "package": "com.ayamkabisat.promptvault",
-      "versionCode": 1,
-      "edgeToEdgeEnabled": true
+      "versionCode": 1
     },
     "extra": {
       "router": {
