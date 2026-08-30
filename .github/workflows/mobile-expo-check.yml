@@ -1,0 +1,27 @@
+name: Mobile Expo Check
+
+on:
+  push:
+    branches: [mobile-expo-v1]
+    paths:
+      - 'mobile/**'
+      - '.github/workflows/mobile-expo-check.yml'
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.19.5'
+          cache: npm
+          cache-dependency-path: mobile/package.json
+      - run: npm install
+      - run: npx expo install --check
+      - run: npx expo-doctor
+      - run: npx expo export --platform android --output-dir dist-ci
