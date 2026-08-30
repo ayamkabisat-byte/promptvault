@@ -1,4 +1,4 @@
-import FashionBatchImporter from "@/components/FashionBatchImporter";
+import FashionBatchImporterV2 from "@/components/FashionBatchImporterV2";
 
 export const metadata = {
   title: "Fashion Batch Import | PromptVault",
@@ -6,5 +6,5 @@ export const metadata = {
 };
 
 export default function FashionImportPage() {
-  return <FashionBatchImporter />;
+  return <FashionBatchImporterV2 />;
 }
