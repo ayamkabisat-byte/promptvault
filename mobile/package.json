@@ -1,6 +1,6 @@
 {
   "name": "promptvault-mobile",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "private": true,
   "main": "expo-router/entry",
   "scripts": {
@@ -10,11 +10,13 @@
     "doctor": "npx expo-doctor"
   },
   "dependencies": {
+    "@shopify/flash-list": "2.0.2",
     "@supabase/supabase-js": "^2.57.4",
     "expo": "~55.0.0",
     "expo-clipboard": "~55.0.17",
     "expo-constants": "~55.0.17",
     "expo-font": "~55.0.8",
+    "expo-image": "~55.0.11",
     "expo-linking": "~55.0.16",
     "expo-navigation-bar": "~55.0.17",
     "expo-router": "~55.0.18",
