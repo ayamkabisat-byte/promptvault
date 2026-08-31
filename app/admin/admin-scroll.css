@@ -116,6 +116,70 @@
   margin: -7px 1px 11px;
 }
 
+/* Fast catalog search for locating prompts to edit. */
+.pv2-admin-search {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 9px;
+  min-height: 44px;
+  margin: 0 0 10px;
+  padding: 0 10px 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--surface2) 88%, transparent);
+  color: var(--dim);
+  transition: border-color .18s ease, background .18s ease;
+}
+
+.pv2-admin-search:focus-within {
+  border-color: rgba(255,157,46,.42);
+  background: var(--surface2);
+  color: var(--accent);
+}
+
+.pv2-admin-search input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 11px;
+}
+
+.pv2-admin-search input::placeholder {
+  color: var(--dim);
+}
+
+.pv2-admin-search button {
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--dim);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.pv2-admin-search button:hover {
+  color: var(--text);
+  background: rgba(255,255,255,.05);
+}
+
+.pv2-admin-search-empty {
+  padding: 22px 12px;
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  color: var(--dim);
+  font-size: 10px;
+  text-align: center;
+}
+
 @media (max-width: 520px) {
   .pv2-category-add-row {
     grid-template-columns: 1fr;
@@ -123,5 +187,9 @@
 
   .pv2-category-add-row button {
     width: 100%;
+  }
+
+  .pv2-admin-search {
+    min-height: 46px;
   }
 }
