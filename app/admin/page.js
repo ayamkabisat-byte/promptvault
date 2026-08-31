@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, BarChart3, Edit2, ImagePlus, Lock, LogOut, Plus, Sparkles, Trash2, Upload, X } from "lucide-react";
+import { ArrowLeft, BarChart3, Edit2, ImagePlus, Lock, LogOut, Plus, Search, Sparkles, Trash2, Upload, X } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { getPublicStats } from "@/lib/metrics";
 import { generateAutoTags } from "@/lib/autoTags";
@@ -56,6 +56,7 @@ export default function AdminPage() {
   const [password, setPassword] = useState("");
   const [authError, setAuthError] = useState("");
   const [prompts, setPrompts] = useState([]);
+  const [catalogSearch, setCatalogSearch] = useState("");
   const [categories, setCategories] = useState([]);
   const [newCategory, setNewCategory] = useState("");
   const [categorySaving, setCategorySaving] = useState(false);
@@ -116,6 +117,27 @@ export default function AdminPage() {
     copies: acc.copies + Number(p.copy_count || 0),
     favorites: acc.favorites + Number(p.favorite_count || 0),
   }), { views: 0, copies: 0, favorites: 0 }), [prompts]);
+
+  const filteredPrompts = useMemo(() => {
+    const terms = catalogSearch.trim().toLowerCase().split(/\s+/).filter(Boolean);
+    if (!terms.length) return prompts;
+
+    return prompts.filter((p) => {
+      const tags = Array.isArray(p.tags) ? p.tags.join(" ") : String(p.tags || "");
+      const haystack = [
+        p.id,
+        p.title,
+        p.description,
+        p.medium,
+        p.category,
+        p.model,
+        p.status,
+        tags,
+      ].map((value) => String(value || "").toLowerCase()).join(" ");
+
+      return terms.every((term) => haystack.includes(term));
+    });
+  }, [prompts, catalogSearch]);
 
   const login = async (e) => {
     e.preventDefault(); setAuthError("");
@@ -366,8 +388,19 @@ export default function AdminPage() {
         </form>
 
         <section className="pv2-admin-list">
-          <div className="pv2-admin-list-head"><h2>Prompt catalog</h2><span>{prompts.length} items</span></div>
-          {prompts.map((p) => <article key={p.id} className="pv2-admin-row"><img src={p.image_url} alt="" /><div className="grow"><strong>{p.title}</strong><span>{p.medium || "Fotografi"} · {p.category} · {p.model || "AI"}</span><small>{p.status || "published"}{p.is_featured ? " · featured" : ""}</small></div><button onClick={() => edit(p)}><Edit2 size={14} /></button><button className="danger" onClick={() => remove(p)}><Trash2 size={14} /></button></article>)}
+          <div className="pv2-admin-list-head"><h2>Prompt catalog</h2><span>{catalogSearch.trim() ? `${filteredPrompts.length} of ${prompts.length}` : `${prompts.length} items`}</span></div>
+          <div className="pv2-admin-search">
+            <Search size={16} aria-hidden="true" />
+            <input
+              value={catalogSearch}
+              onChange={(e) => setCatalogSearch(e.target.value)}
+              placeholder="Search title, prompt, category, tags, model, ID…"
+              aria-label="Search prompt catalog"
+              autoComplete="off"
+            />
+            {catalogSearch && <button type="button" onClick={() => setCatalogSearch("")} aria-label="Clear search"><X size={14} /></button>}
+          </div>
+          {filteredPrompts.length ? filteredPrompts.map((p) => <article key={p.id} className="pv2-admin-row"><img src={p.image_url} alt="" /><div className="grow"><strong>{p.title}</strong><span>{p.medium || "Fotografi"} · {p.category} · {p.model || "AI"}</span><small>{p.status || "published"}{p.is_featured ? " · featured" : ""}</small></div><button onClick={() => edit(p)}><Edit2 size={14} /></button><button className="danger" onClick={() => remove(p)}><Trash2 size={14} /></button></article>) : <div className="pv2-admin-search-empty">No prompt found for “{catalogSearch.trim()}”.</div>}
         </section>
       </div>
     </main>
