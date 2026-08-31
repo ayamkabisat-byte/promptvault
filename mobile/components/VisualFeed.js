@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavBar } from '../context/NavBarContext';
 
 const GAP = 8;
-const CHUNK_SIZE = 14;
+const CHUNK_SIZE = 6;
 const HEIGHT_FACTORS = [1.58, 0.82, 1.08, 1.34, 0.72, 1.48, 0.94, 1.18, 0.78, 1.66, 1.02, 1.26];
 
 function chunk(items, size = CHUNK_SIZE) {
@@ -48,7 +48,13 @@ function Tile({ item, image, height, onPress }) {
   return (
     <Pressable style={[styles.tile, { height }]} onPress={() => onPress(item)}>
       {image ? (
-        <Image source={{ uri: image }} style={styles.image} resizeMode="cover" />
+        <Image
+          source={{ uri: image }}
+          style={styles.image}
+          resizeMode="cover"
+          resizeMethod="resize"
+          fadeDuration={120}
+        />
       ) : (
         <View style={styles.placeholder}><Text style={styles.placeholderText}>✦</Text></View>
       )}
@@ -104,7 +110,7 @@ export function BentoFeed({ items, getImage, onOpen, keyFor }) {
       contentContainerStyle={styles.feed}
       showsVerticalScrollIndicator={false}
       onScroll={handleScroll}
-      scrollEventThrottle={16}
+      scrollEventThrottle={32}
       renderItem={({ item: group }) => (
         <View style={styles.masonryChunk}>
           {renderColumn(group.left)}
@@ -112,8 +118,10 @@ export function BentoFeed({ items, getImage, onOpen, keyFor }) {
         </View>
       )}
       removeClippedSubviews
-      initialNumToRender={3}
-      windowSize={7}
+      initialNumToRender={2}
+      maxToRenderPerBatch={2}
+      updateCellsBatchingPeriod={80}
+      windowSize={4}
     />
   );
 }
@@ -165,7 +173,15 @@ export function RelatedMasonry({ items, getImage, onOpen, keyFor }) {
               style={[styles.relatedTile, { aspectRatio: ratios[index % ratios.length] }]}
               onPress={() => onOpen(item)}
             >
-              {getImage(item) ? <Image source={{ uri: getImage(item) }} style={styles.image} resizeMode="cover" /> : null}
+              {getImage(item) ? (
+                <Image
+                  source={{ uri: getImage(item) }}
+                  style={styles.image}
+                  resizeMode="cover"
+                  resizeMethod="resize"
+                  fadeDuration={120}
+                />
+              ) : null}
             </Pressable>
           ))}
         </View>
