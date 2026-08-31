@@ -25,17 +25,10 @@ export default function RootLayout() {
   return (
     <FavoritesProvider>
       <StatusBar style="light" />
-      <Stack
-        screenOptions={{
-          headerStyle: { backgroundColor: colors.bg },
-          headerTintColor: colors.text,
-          headerShadowVisible: false,
-          contentStyle: { backgroundColor: colors.bg },
-        }}
-      >
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="prompt/[id]" options={{ title: 'Prompt', presentation: 'card' }} />
-        <Stack.Screen name="fashion/[id]" options={{ title: 'Fashion Style', presentation: 'card' }} />
+      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="prompt/[id]" options={{ presentation: 'card' }} />
+        <Stack.Screen name="fashion/[id]" options={{ presentation: 'card' }} />
       </Stack>
     </FavoritesProvider>
   );
