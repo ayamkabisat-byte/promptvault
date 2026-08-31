@@ -86,7 +86,9 @@ export default function FashionDetailScreen() {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
         <View style={styles.hero}>
           {image ? <Image source={{ uri: image }} style={styles.image} resizeMode="contain" /> : null}
-          <Pressable style={styles.back} onPress={() => router.back()}><Text style={styles.backText}>‹</Text></Pressable>
+          <Pressable style={styles.back} onPress={() => router.back()} hitSlop={8}>
+            <Text style={styles.backText}>←</Text>
+          </Pressable>
           <View style={styles.modeSwitch}>
             <Pressable disabled={!item.image_img2img_url} style={[styles.modeButton, mode === 'look' && styles.modeActive]} onPress={() => setMode('look')}>
               <Text style={[styles.modeText, mode === 'look' && styles.modeTextActive]}>LOOK</Text>
@@ -144,9 +146,9 @@ const styles = StyleSheet.create({
   loading: { flex: 1, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center' },
   hero: { position: 'relative', width: '100%', height: 520, borderRadius: 22, overflow: 'hidden', backgroundColor: '#050507' },
   image: { width: '100%', height: '100%' },
-  back: { position: 'absolute', left: 12, top: 12, width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(248,247,244,.94)', alignItems: 'center', justifyContent: 'center' },
-  backText: { color: '#17181d', fontSize: 38, lineHeight: 39, marginTop: -3 },
-  modeSwitch: { position: 'absolute', right: 12, top: 12, flexDirection: 'row', gap: 3, backgroundColor: 'rgba(248,247,244,.94)', padding: 4, borderRadius: 22 },
+  back: { position: 'absolute', left: 16, top: 18, width: 46, height: 46, borderRadius: 23, backgroundColor: 'rgba(248,247,244,.96)', alignItems: 'center', justifyContent: 'center', elevation: 6 },
+  backText: { color: '#17181d', fontSize: 25, lineHeight: 28, fontWeight: '700', marginLeft: -1 },
+  modeSwitch: { position: 'absolute', right: 14, top: 18, flexDirection: 'row', gap: 3, backgroundColor: 'rgba(248,247,244,.95)', padding: 4, borderRadius: 22 },
   modeButton: { height: 34, paddingHorizontal: 12, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
   modeActive: { backgroundColor: colors.lavender },
   modeText: { color: '#686b75', fontSize: 8, fontWeight: '900', letterSpacing: 1 },

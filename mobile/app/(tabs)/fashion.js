@@ -6,6 +6,15 @@ import { supabase } from '../../lib/supabase';
 import { colors } from '../../lib/theme';
 import { BentoFeed, FloatingSearch } from '../../components/VisualFeed';
 
+function shuffle(items) {
+  const copy = [...items];
+  for (let i = copy.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+}
+
 export default function FashionScreen() {
   const router = useRouter();
   const [rows, setRows] = useState([]);
@@ -19,7 +28,7 @@ export default function FashionScreen() {
       .select('id,source_style_id,title,region,country,era,scene,image_img2img_url,image_infographic_url,prompt_img2img,status')
       .eq('status', 'published')
       .order('source_style_id', { ascending: true });
-    if (!error) setRows(data || []);
+    if (!error) setRows(shuffle(data || []));
     setLoading(false);
   }, []);
 

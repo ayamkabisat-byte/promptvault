@@ -70,7 +70,9 @@ export default function PromptDetailScreen() {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
         <View style={styles.hero}>
           {item.image_url ? <Image source={{ uri: item.image_url }} style={styles.image} resizeMode="contain" /> : null}
-          <Pressable style={styles.back} onPress={() => router.back()}><Text style={styles.backText}>‹</Text></Pressable>
+          <Pressable style={styles.back} onPress={() => router.back()} hitSlop={8}>
+            <Text style={styles.backText}>←</Text>
+          </Pressable>
         </View>
 
         <Text style={styles.kicker}>{item.medium || 'Prompt'} · {item.category || item.model || 'AI'}</Text>
@@ -105,8 +107,8 @@ const styles = StyleSheet.create({
   loading: { flex: 1, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center' },
   hero: { position: 'relative', width: '100%', height: 520, borderRadius: 22, overflow: 'hidden', backgroundColor: '#050507' },
   image: { width: '100%', height: '100%' },
-  back: { position: 'absolute', left: 12, top: 12, width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(248,247,244,.94)', alignItems: 'center', justifyContent: 'center' },
-  backText: { color: '#17181d', fontSize: 38, lineHeight: 39, marginTop: -3 },
+  back: { position: 'absolute', left: 16, top: 18, width: 46, height: 46, borderRadius: 23, backgroundColor: 'rgba(248,247,244,.96)', alignItems: 'center', justifyContent: 'center', elevation: 6 },
+  backText: { color: '#17181d', fontSize: 25, lineHeight: 28, fontWeight: '700', marginLeft: -1 },
   kicker: { color: colors.orange, fontSize: 10, fontWeight: '900', letterSpacing: 1.1, textTransform: 'uppercase', marginTop: 18 },
   title: { color: colors.text, fontSize: 28, fontWeight: '900', letterSpacing: -1, marginTop: 6 },
   actions: { flexDirection: 'row', gap: 9, marginTop: 16 },

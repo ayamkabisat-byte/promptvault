@@ -6,6 +6,15 @@ import { supabase } from '../../lib/supabase';
 import { colors } from '../../lib/theme';
 import { BentoFeed, FloatingSearch } from '../../components/VisualFeed';
 
+function shuffle(items) {
+  const copy = [...items];
+  for (let i = copy.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+}
+
 export default function DiscoverScreen() {
   const router = useRouter();
   const [rows, setRows] = useState([]);
@@ -20,7 +29,7 @@ export default function DiscoverScreen() {
       .neq('status', 'draft')
       .order('created_at', { ascending: false })
       .limit(600);
-    if (!error) setRows(data || []);
+    if (!error) setRows(shuffle(data || []));
     setLoading(false);
   }, []);
 
