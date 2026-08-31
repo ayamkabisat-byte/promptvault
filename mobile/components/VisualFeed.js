@@ -1,11 +1,11 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { Image as ExpoImage } from 'expo-image';
 import { useNavBar } from '../context/NavBarContext';
 
 const GAP = 8;
-const FALLBACK_ASPECTS = [0.66, 0.82, 1.02, 0.72, 1.16, 0.78, 0.92, 0.69, 1.08];
+const PRESENTATION_ASPECTS = [0.66, 0.74, 0.82, 0.92, 1.02, 0.78, 0.88, 0.70, 0.96, 1.08, 0.76, 0.84];
 const RELATED_ASPECTS = [0.72, 0.96, 0.8, 1.12, 0.68, 0.88];
 
 function hashKey(value) {
@@ -15,30 +15,8 @@ function hashKey(value) {
   return Math.abs(hash);
 }
 
-function clamp(value, min, max) {
-  return Math.min(max, Math.max(min, value));
-}
-
-function isWideIndex(index) {
-  return index > 6 && index % 13 === 9;
-}
-
-function MasonryTile({ item, image, itemKey, index, onPress, wide }) {
-  const fallback = wide ? 1.68 : FALLBACK_ASPECTS[(hashKey(itemKey) + index) % FALLBACK_ASPECTS.length];
-  const [aspectRatio, setAspectRatio] = useState(fallback);
-
-  useEffect(() => {
-    setAspectRatio(fallback);
-  }, [itemKey, fallback]);
-
-  const onLoad = (event) => {
-    if (wide) return;
-    const width = event?.source?.width;
-    const height = event?.source?.height;
-    if (!width || !height) return;
-    const next = clamp(width / height, 0.62, 1.22);
-    if (Math.abs(next - aspectRatio) > 0.035) setAspectRatio(next);
-  };
+function MasonryTile({ item, image, itemKey, index, onPress }) {
+  const aspectRatio = PRESENTATION_ASPECTS[(hashKey(itemKey) + index) % PRESENTATION_ASPECTS.length];
 
   return (
     <View style={styles.cellGutter}>
@@ -48,10 +26,10 @@ function MasonryTile({ item, image, itemKey, index, onPress, wide }) {
             source={image}
             style={styles.image}
             contentFit="cover"
+            contentPosition="center"
             cachePolicy="memory-disk"
             recyclingKey={String(itemKey)}
-            transition={120}
-            onLoad={onLoad}
+            transition={110}
           />
         ) : (
           <View style={styles.placeholder}><Text style={styles.placeholderText}>✦</Text></View>
@@ -81,7 +59,7 @@ export function BentoFeed({ items, getImage, onOpen, keyFor }) {
     }
 
     const delta = y - anchorY.current;
-    if (Math.abs(delta) < 22) return;
+    if (Math.abs(delta) < 24) return;
     updateCompact(delta > 0);
     anchorY.current = y;
   };
@@ -93,10 +71,6 @@ export function BentoFeed({ items, getImage, onOpen, keyFor }) {
       numColumns={2}
       optimizeItemArrangement
       keyExtractor={(item) => String(keyFor ? keyFor(item) : item.id)}
-      getItemType={(_, index) => (isWideIndex(index) ? 'wide' : 'tile')}
-      overrideItemLayout={(layout, _item, index) => {
-        layout.span = isWideIndex(index) ? 2 : 1;
-      }}
       renderItem={({ item, index }) => {
         const itemKey = keyFor ? keyFor(item) : item.id;
         return (
@@ -106,7 +80,6 @@ export function BentoFeed({ items, getImage, onOpen, keyFor }) {
             itemKey={itemKey}
             index={index}
             onPress={onOpen}
-            wide={isWideIndex(index)}
           />
         );
       }}
@@ -197,31 +170,31 @@ export function RelatedMasonry({ items, getImage, onOpen, keyFor }) {
 }
 
 const styles = StyleSheet.create({
-  feed: { paddingHorizontal: 8, paddingTop: 24, paddingBottom: 118 },
+  feed: { paddingHorizontal: 8, paddingTop: 24, paddingBottom: 122 },
   cellGutter: { paddingHorizontal: GAP / 2, paddingBottom: GAP },
   tile: { width: '100%', borderRadius: 18, overflow: 'hidden', backgroundColor: '#15151a' },
   image: { width: '100%', height: '100%' },
   placeholder: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#16161b' },
   placeholderText: { color: '#555761', fontSize: 24 },
   searchFab: {
-    position: 'absolute', right: 16, top: 38, zIndex: 80,
+    position: 'absolute', right: 16, top: 54, zIndex: 80,
     width: 48, height: 48, borderRadius: 24,
-    backgroundColor: 'rgba(248,247,244,.72)',
-    borderWidth: 1, borderColor: 'rgba(255,255,255,.26)',
+    backgroundColor: 'rgba(248,247,244,.58)',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,.22)',
     alignItems: 'center', justifyContent: 'center',
-    shadowColor: '#000', shadowOpacity: .14, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 10,
+    shadowColor: '#000', shadowOpacity: .11, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 9,
   },
   searchIcon: { color: '#17181d', fontSize: 28, lineHeight: 30, transform: [{ rotate: '-12deg' }, { translateY: -1 }] },
   searchPanel: {
-    position: 'absolute', left: 14, right: 14, top: 38, zIndex: 80,
+    position: 'absolute', left: 14, right: 14, top: 54, zIndex: 80,
     height: 50, borderRadius: 25, paddingLeft: 18, paddingRight: 6,
-    backgroundColor: 'rgba(248,247,244,.78)',
-    borderWidth: 1, borderColor: 'rgba(255,255,255,.28)',
+    backgroundColor: 'rgba(248,247,244,.66)',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,.24)',
     flexDirection: 'row', alignItems: 'center',
-    shadowColor: '#000', shadowOpacity: .14, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 10,
+    shadowColor: '#000', shadowOpacity: .11, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 9,
   },
   searchInput: { flex: 1, color: '#17181d', fontSize: 14, height: 48 },
-  searchClose: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(224,222,218,.72)' },
+  searchClose: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(224,222,218,.66)' },
   searchCloseText: { color: '#282a30', fontSize: 24, lineHeight: 26 },
   relatedRow: { flexDirection: 'row', gap: GAP, alignItems: 'flex-start' },
   relatedColumn: { flex: 1, gap: GAP },
