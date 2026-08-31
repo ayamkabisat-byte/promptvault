@@ -1,51 +1,142 @@
+import { useEffect, useRef } from 'react';
+import { Animated, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { Tabs } from 'expo-router';
-import { Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../../lib/theme';
+import { NavBarProvider, useNavBar } from '../../context/NavBarContext';
 
-function icon(symbol, color, focused) {
+const SYMBOLS = { index: '⌂', fashion: '✦', favorites: '♡' };
+
+function TabIcon({ routeName, focused }) {
+  const symbol = SYMBOLS[routeName] || '•';
   return (
-    <View style={{ width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: focused ? 'rgba(255,145,56,.16)' : 'transparent' }}>
-      <Text style={{ color, fontSize: symbol === '♡' ? 25 : 23, fontWeight: '700' }}>{symbol}</Text>
+    <View style={[styles.iconBubble, focused && styles.iconBubbleActive]}>
+      <Text
+        style={[
+          styles.iconText,
+          routeName === 'favorites' && styles.heartIcon,
+          routeName === 'index' && styles.homeIcon,
+          focused && styles.iconTextActive,
+        ]}
+      >
+        {symbol}
+      </Text>
     </View>
   );
 }
 
-export default function TabsLayout() {
+function FloatingTabBar({ state, descriptors, navigation }) {
+  const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
+  const { compact, setCompact } = useNavBar();
+  const progress = useRef(new Animated.Value(compact ? 1 : 0)).current;
+  const fullWidth = Math.max(260, width - 28);
+  const activeRoute = state.routes[state.index];
+
+  useEffect(() => {
+    Animated.spring(progress, {
+      toValue: compact ? 1 : 0,
+      useNativeDriver: false,
+      friction: 10,
+      tension: 88,
+    }).start();
+  }, [compact, progress]);
+
+  const animatedWidth = progress.interpolate({ inputRange: [0, 1], outputRange: [fullWidth, 58] });
+  const animatedHeight = progress.interpolate({ inputRange: [0, 1], outputRange: [66, 58] });
+  const animatedRadius = progress.interpolate({ inputRange: [0, 1], outputRange: [33, 29] });
+
+  const pressRoute = (route, index) => {
+    const focused = state.index === index;
+    const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
+    setCompact(false);
+    if (!focused && !event.defaultPrevented) navigation.navigate(route.name, route.params);
+  };
+
+  return (
+    <Animated.View
+      style={[
+        styles.bar,
+        {
+          bottom: Math.max(16, insets.bottom + 12),
+          width: animatedWidth,
+          height: animatedHeight,
+          borderRadius: animatedRadius,
+        },
+      ]}
+    >
+      {compact ? (
+        <Pressable
+          style={styles.compactButton}
+          onPress={() => setCompact(false)}
+          accessibilityRole="button"
+          accessibilityLabel="Expand navigation"
+        >
+          <TabIcon routeName={activeRoute.name} focused />
+        </Pressable>
+      ) : (
+        state.routes.map((route, index) => {
+          const { options } = descriptors[route.key];
+          const focused = state.index === index;
+          return (
+            <Pressable
+              key={route.key}
+              style={styles.tabButton}
+              onPress={() => pressRoute(route, index)}
+              accessibilityRole="button"
+              accessibilityState={focused ? { selected: true } : {}}
+              accessibilityLabel={options.tabBarAccessibilityLabel || options.title || route.name}
+            >
+              <TabIcon routeName={route.name} focused={focused} />
+            </Pressable>
+          );
+        })
+      )}
+    </Animated.View>
+  );
+}
+
+function TabsShell() {
   return (
     <Tabs
+      tabBar={(props) => <FloatingTabBar {...props} />}
       screenOptions={{
         headerShown: false,
         tabBarShowLabel: false,
-        tabBarHideOnKeyboard: true,
-        tabBarStyle: {
-          position: 'absolute',
-          left: 42,
-          right: 42,
-          bottom: Math.max(12, insets.bottom + 8),
-          height: 64,
-          borderRadius: 32,
-          borderTopWidth: 0,
-          backgroundColor: 'rgba(248,247,244,.97)',
-          paddingHorizontal: 10,
-          paddingTop: 6,
-          paddingBottom: 6,
-          shadowColor: '#000',
-          shadowOpacity: .24,
-          shadowRadius: 22,
-          shadowOffset: { width: 0, height: 9 },
-          elevation: 16,
-        },
-        tabBarItemStyle: { borderRadius: 26 },
-        tabBarActiveTintColor: '#17181d',
-        tabBarInactiveTintColor: '#747783',
         sceneStyle: { backgroundColor: colors.bg },
       }}
     >
-      <Tabs.Screen name="index" options={{ title: 'Discover', tabBarIcon: ({ color, focused }) => icon('⌂', color, focused) }} />
-      <Tabs.Screen name="fashion" options={{ title: 'Fashion', tabBarIcon: ({ color, focused }) => icon('✦', color, focused) }} />
-      <Tabs.Screen name="favorites" options={{ title: 'Favorites', tabBarIcon: ({ color, focused }) => icon('♡', color, focused) }} />
+      <Tabs.Screen name="index" options={{ title: 'Discover' }} />
+      <Tabs.Screen name="fashion" options={{ title: 'Fashion' }} />
+      <Tabs.Screen name="favorites" options={{ title: 'Favorites' }} />
     </Tabs>
   );
 }
+
+export default function TabsLayout() {
+  return (
+    <NavBarProvider>
+      <TabsShell />
+    </NavBarProvider>
+  );
+}
+
+const styles = StyleSheet.create({
+  bar: {
+    position: 'absolute', left: 14, zIndex: 100,
+    backgroundColor: 'rgba(248,247,244,.80)',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,.25)',
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-around',
+    paddingHorizontal: 7,
+    shadowColor: '#000', shadowOpacity: .15, shadowRadius: 18, shadowOffset: { width: 0, height: 8 }, elevation: 16,
+    overflow: 'hidden',
+  },
+  tabButton: { flex: 1, height: 58, alignItems: 'center', justifyContent: 'center' },
+  compactButton: { width: 58, height: 58, alignItems: 'center', justifyContent: 'center' },
+  iconBubble: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
+  iconBubbleActive: { backgroundColor: 'rgba(255,145,56,.15)' },
+  iconText: { color: '#686b76', fontSize: 24, lineHeight: 28, fontWeight: '700', textAlign: 'center', transform: [{ translateY: -1 }] },
+  homeIcon: { transform: [{ translateY: 0 }] },
+  heartIcon: { fontSize: 27, lineHeight: 30, transform: [{ translateY: -1 }] },
+  iconTextActive: { color: '#17181d' },
+});
