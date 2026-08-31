@@ -1,60 +1,19 @@
-import { useMemo, useRef, useState, useWindowDimensions } from 'react';
-import { FlatList, Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavBar } from '../context/NavBarContext';
+import { FlatList, Image, Pressable, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
+import { useState } from 'react';
 
 const GAP = 8;
-const CHUNK_SIZE = 6;
-const HEIGHT_FACTORS = [1.58, 0.82, 1.08, 1.34, 0.72, 1.48, 0.94, 1.18, 0.78, 1.66, 1.02, 1.26];
 
-function chunk(items, size = CHUNK_SIZE) {
+function chunk(items, size = 3) {
   const out = [];
   for (let i = 0; i < items.length; i += size) out.push(items.slice(i, i + size));
   return out;
-}
-
-function hashKey(value) {
-  const text = String(value ?? 'item');
-  let hash = 0;
-  for (let i = 0; i < text.length; i += 1) hash = ((hash << 5) - hash + text.charCodeAt(i)) | 0;
-  return Math.abs(hash);
-}
-
-function buildMasonryChunk(group, colWidth, keyFor) {
-  const left = [];
-  const right = [];
-  let leftHeight = 0;
-  let rightHeight = 0;
-
-  group.forEach((item, index) => {
-    const key = keyFor ? keyFor(item) : item.id;
-    const factor = HEIGHT_FACTORS[(hashKey(key) + index) % HEIGHT_FACTORS.length];
-    const height = Math.max(118, Math.round(colWidth * factor));
-    const entry = { item, height, key: String(key) };
-
-    if (leftHeight <= rightHeight) {
-      left.push(entry);
-      leftHeight += height + GAP;
-    } else {
-      right.push(entry);
-      rightHeight += height + GAP;
-    }
-  });
-
-  return { left, right };
 }
 
 function Tile({ item, image, height, onPress }) {
   return (
     <Pressable style={[styles.tile, { height }]} onPress={() => onPress(item)}>
       {image ? (
-        <Image
-          source={{ uri: image }}
-          style={styles.image}
-          resizeMode="cover"
-          resizeMethod="resize"
-          fadeDuration={120}
-        />
+        <Image source={{ uri: image }} style={styles.image} resizeMode="cover" />
       ) : (
         <View style={styles.placeholder}><Text style={styles.placeholderText}>✦</Text></View>
       )}
@@ -64,83 +23,75 @@ function Tile({ item, image, height, onPress }) {
 
 export function BentoFeed({ items, getImage, onOpen, keyFor }) {
   const { width } = useWindowDimensions();
-  const { setCompact } = useNavBar();
   const contentWidth = Math.max(280, width - 24);
-  const colWidth = (contentWidth - GAP) / 2;
-  const anchorY = useRef(0);
-  const lastCompact = useRef(false);
+  const col = (contentWidth - GAP) / 2;
+  const tall = Math.round(col * 1.55);
+  const small = Math.round((tall - GAP) / 2);
+  const wide = Math.round(contentWidth * 0.58);
+  const bottom = Math.round(col * 0.82);
+  const groups = chunk(items, 3);
 
-  const groups = useMemo(
-    () => chunk(items).map((group) => buildMasonryChunk(group, colWidth, keyFor)),
-    [items, colWidth, keyFor],
-  );
-
-  const updateCompact = (next) => {
-    if (lastCompact.current === next) return;
-    lastCompact.current = next;
-    setCompact(next);
-  };
-
-  const handleScroll = (event) => {
-    const y = event.nativeEvent.contentOffset.y;
-    if (y < 20) {
-      anchorY.current = y;
-      updateCompact(false);
-      return;
-    }
-
-    const delta = y - anchorY.current;
-    if (Math.abs(delta) < 14) return;
-    updateCompact(delta > 0);
-    anchorY.current = y;
-  };
-
-  const renderColumn = (entries) => (
-    <View style={styles.masonryColumn}>
-      {entries.map(({ item, height, key }) => (
-        <Tile key={key} item={item} image={getImage(item)} height={height} onPress={onOpen} />
-      ))}
-    </View>
-  );
+  const renderTile = (item, height) => item ? (
+    <Tile
+      key={keyFor ? keyFor(item) : String(item.id)}
+      item={item}
+      image={getImage(item)}
+      height={height}
+      onPress={onOpen}
+    />
+  ) : <View style={{ height }} />;
 
   return (
     <FlatList
       data={groups}
-      keyExtractor={(_, index) => `masonry-${index}`}
+      keyExtractor={(group, index) => `${keyFor ? keyFor(group[0]) : group[0]?.id || 'group'}-${index}`}
       contentContainerStyle={styles.feed}
       showsVerticalScrollIndicator={false}
-      onScroll={handleScroll}
-      scrollEventThrottle={32}
-      renderItem={({ item: group }) => (
-        <View style={styles.masonryChunk}>
-          {renderColumn(group.left)}
-          {renderColumn(group.right)}
-        </View>
-      )}
+      renderItem={({ item: group, index }) => {
+        const pattern = index % 3;
+        if (pattern === 0) {
+          return (
+            <View style={[styles.groupRow, { height: tall }]}>
+              <View style={styles.column}>{renderTile(group[0], tall)}</View>
+              <View style={styles.columnStack}>{renderTile(group[1], small)}{renderTile(group[2], small)}</View>
+            </View>
+          );
+        }
+        if (pattern === 1) {
+          return (
+            <View style={[styles.groupRow, { height: tall }]}>
+              <View style={styles.columnStack}>{renderTile(group[0], small)}{renderTile(group[1], small)}</View>
+              <View style={styles.column}>{renderTile(group[2] || group[1] || group[0], tall)}</View>
+            </View>
+          );
+        }
+        return (
+          <View style={styles.groupBlock}>
+            {renderTile(group[0], wide)}
+            <View style={styles.groupRow}>{renderTile(group[1], bottom)}{renderTile(group[2], bottom)}</View>
+          </View>
+        );
+      }}
       removeClippedSubviews
-      initialNumToRender={2}
-      maxToRenderPerBatch={2}
-      updateCellsBatchingPeriod={80}
-      windowSize={4}
+      initialNumToRender={5}
+      windowSize={7}
     />
   );
 }
 
 export function FloatingSearch({ value, onChangeText, placeholder = 'Search…', accent = '#ff9138' }) {
   const [open, setOpen] = useState(false);
-  const insets = useSafeAreaInsets();
-  const top = insets.top + 12;
 
   if (!open) {
     return (
-      <Pressable style={[styles.searchFab, { top }]} onPress={() => setOpen(true)} hitSlop={10}>
+      <Pressable style={styles.searchFab} onPress={() => setOpen(true)} hitSlop={12}>
         <Text style={styles.searchIcon}>⌕</Text>
       </Pressable>
     );
   }
 
   return (
-    <View style={[styles.searchPanel, { top }]}>
+    <View style={styles.searchPanel}>
       <TextInput
         autoFocus
         value={value}
@@ -151,9 +102,7 @@ export function FloatingSearch({ value, onChangeText, placeholder = 'Search…',
         selectionColor={accent}
         returnKeyType="search"
       />
-      <Pressable style={styles.searchClose} onPress={() => setOpen(false)} hitSlop={8}>
-        <Text style={styles.searchCloseText}>×</Text>
-      </Pressable>
+      <Pressable style={styles.searchClose} onPress={() => setOpen(false)} hitSlop={8}><Text style={styles.searchCloseText}>×</Text></Pressable>
     </View>
   );
 }
@@ -173,15 +122,7 @@ export function RelatedMasonry({ items, getImage, onOpen, keyFor }) {
               style={[styles.relatedTile, { aspectRatio: ratios[index % ratios.length] }]}
               onPress={() => onOpen(item)}
             >
-              {getImage(item) ? (
-                <Image
-                  source={{ uri: getImage(item) }}
-                  style={styles.image}
-                  resizeMode="cover"
-                  resizeMethod="resize"
-                  fadeDuration={120}
-                />
-              ) : null}
+              {getImage(item) ? <Image source={{ uri: getImage(item) }} style={styles.image} resizeMode="cover" /> : null}
             </Pressable>
           ))}
         </View>
@@ -191,28 +132,30 @@ export function RelatedMasonry({ items, getImage, onOpen, keyFor }) {
 }
 
 const styles = StyleSheet.create({
-  feed: { paddingHorizontal: 12, paddingTop: 72, paddingBottom: 118 },
-  masonryChunk: { flexDirection: 'row', gap: GAP, alignItems: 'flex-start', marginBottom: GAP },
-  masonryColumn: { flex: 1, gap: GAP },
-  tile: { width: '100%', borderRadius: 18, overflow: 'hidden', backgroundColor: '#15151a' },
+  feed: { paddingHorizontal: 12, paddingTop: 20, paddingBottom: 112 },
+  groupRow: { flexDirection: 'row', gap: GAP, marginBottom: GAP },
+  groupBlock: { gap: GAP, marginBottom: GAP },
+  column: { flex: 1 },
+  columnStack: { flex: 1, gap: GAP },
+  tile: { flex: 1, width: '100%', borderRadius: 18, overflow: 'hidden', backgroundColor: '#15151a' },
   image: { width: '100%', height: '100%' },
   placeholder: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#16161b' },
   placeholderText: { color: '#555761', fontSize: 24 },
   searchFab: {
-    position: 'absolute', right: 16, zIndex: 60,
+    position: 'absolute', right: 14, top: 24, zIndex: 50,
     width: 48, height: 48, borderRadius: 24,
     backgroundColor: 'rgba(248,247,244,.98)',
     alignItems: 'center', justifyContent: 'center',
-    shadowColor: '#000', shadowOpacity: .22, shadowRadius: 15, shadowOffset: { width: 0, height: 7 }, elevation: 14,
+    shadowColor: '#000', shadowOpacity: .22, shadowRadius: 15, shadowOffset: { width: 0, height: 7 }, elevation: 12,
   },
   searchIcon: { color: '#17181d', fontSize: 28, lineHeight: 30, transform: [{ rotate: '-12deg' }] },
   searchPanel: {
-    position: 'absolute', left: 14, right: 14, zIndex: 60,
-    height: 50, borderRadius: 25, paddingLeft: 18, paddingRight: 6,
-    backgroundColor: 'rgba(248,247,244,.99)', flexDirection: 'row', alignItems: 'center',
-    shadowColor: '#000', shadowOpacity: .2, shadowRadius: 15, shadowOffset: { width: 0, height: 7 }, elevation: 14,
+    position: 'absolute', left: 12, right: 12, top: 24, zIndex: 50,
+    height: 48, borderRadius: 24, paddingLeft: 18, paddingRight: 6,
+    backgroundColor: 'rgba(248,247,244,.98)', flexDirection: 'row', alignItems: 'center',
+    shadowColor: '#000', shadowOpacity: .2, shadowRadius: 15, shadowOffset: { width: 0, height: 7 }, elevation: 12,
   },
-  searchInput: { flex: 1, color: '#17181d', fontSize: 14, height: 48 },
+  searchInput: { flex: 1, color: '#17181d', fontSize: 14, height: 46 },
   searchClose: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center', backgroundColor: '#e8e6e1' },
   searchCloseText: { color: '#282a30', fontSize: 24, lineHeight: 26 },
   relatedRow: { flexDirection: 'row', gap: GAP, alignItems: 'flex-start' },
