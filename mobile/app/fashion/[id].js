@@ -86,7 +86,7 @@ export default function FashionDetailScreen() {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
         <View style={styles.hero}>
           {image ? <Image source={{ uri: image }} style={styles.image} resizeMode="contain" /> : null}
-          <Pressable style={styles.back} onPress={() => router.back()} hitSlop={8}>
+          <Pressable style={styles.back} onPress={() => router.back()} hitSlop={10}>
             <Text style={styles.backText}>←</Text>
           </Pressable>
           <View style={styles.modeSwitch}>
@@ -146,9 +146,9 @@ const styles = StyleSheet.create({
   loading: { flex: 1, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center' },
   hero: { position: 'relative', width: '100%', height: 520, borderRadius: 22, overflow: 'hidden', backgroundColor: '#050507' },
   image: { width: '100%', height: '100%' },
-  back: { position: 'absolute', left: 16, top: 18, width: 46, height: 46, borderRadius: 23, backgroundColor: 'rgba(248,247,244,.96)', alignItems: 'center', justifyContent: 'center', elevation: 6 },
-  backText: { color: '#17181d', fontSize: 25, lineHeight: 28, fontWeight: '700', marginLeft: -1 },
-  modeSwitch: { position: 'absolute', right: 14, top: 18, flexDirection: 'row', gap: 3, backgroundColor: 'rgba(248,247,244,.95)', padding: 4, borderRadius: 22 },
+  back: { position: 'absolute', left: 22, top: 24, width: 48, height: 48, borderRadius: 24, backgroundColor: 'rgba(248,247,244,.90)', borderWidth: 1, borderColor: 'rgba(255,255,255,.28)', alignItems: 'center', justifyContent: 'center', elevation: 6 },
+  backText: { color: '#17181d', fontSize: 22, lineHeight: 24, fontWeight: '800', includeFontPadding: false, transform: [{ translateY: -1 }] },
+  modeSwitch: { position: 'absolute', right: 18, top: 24, flexDirection: 'row', gap: 3, backgroundColor: 'rgba(248,247,244,.90)', borderWidth: 1, borderColor: 'rgba(255,255,255,.28)', padding: 4, borderRadius: 22 },
   modeButton: { height: 34, paddingHorizontal: 12, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
   modeActive: { backgroundColor: colors.lavender },
   modeText: { color: '#686b75', fontSize: 8, fontWeight: '900', letterSpacing: 1 },
