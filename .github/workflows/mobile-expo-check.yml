@@ -22,6 +22,7 @@ jobs:
           cache: npm
           cache-dependency-path: mobile/package.json
       - run: npm install
+      - run: node scripts/generate-brand-assets.mjs
       - run: npx expo install --check
       - run: npx expo-doctor
       - run: npx expo export --platform android --output-dir dist-ci
