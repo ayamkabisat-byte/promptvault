@@ -2,16 +2,23 @@
   "expo": {
     "name": "PromptVault",
     "slug": "promptvault-mobile",
-    "version": "0.1.8",
+    "version": "0.1.9",
     "orientation": "portrait",
     "scheme": "promptvault",
     "userInterfaceStyle": "dark",
+    "icon": "./assets/brand/app-icon.svg",
     "plugins": [
       "expo-router"
     ],
     "android": {
       "package": "com.ayamkabisat.promptvault",
-      "versionCode": 8
+      "versionCode": 9,
+      "icon": "./assets/brand/app-icon.svg",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/brand/adaptive-foreground.svg",
+        "monochromeImage": "./assets/brand/monochrome-icon.svg",
+        "backgroundColor": "#F7F5F1"
+      }
     },
     "extra": {
       "router": {
