@@ -3,6 +3,7 @@ import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as Clipboard from 'expo-clipboard';
+import { Image as ExpoImage } from 'expo-image';
 import { supabase } from '../../lib/supabase';
 import { colors } from '../../lib/theme';
 import { useFavorites } from '../../context/FavoritesContext';
@@ -71,7 +72,7 @@ export default function PromptDetailScreen() {
         <View style={styles.hero}>
           {item.image_url ? <Image source={{ uri: item.image_url }} style={styles.image} resizeMode="contain" /> : null}
           <Pressable style={styles.back} onPress={() => router.back()} hitSlop={10}>
-            <Text style={styles.backText}>←</Text>
+            <ExpoImage source={require('../../assets/icons/arrow-left.svg')} style={styles.backIcon} contentFit="contain" />
           </Pressable>
         </View>
 
@@ -108,7 +109,7 @@ const styles = StyleSheet.create({
   hero: { position: 'relative', width: '100%', height: 520, borderRadius: 22, overflow: 'hidden', backgroundColor: '#050507' },
   image: { width: '100%', height: '100%' },
   back: { position: 'absolute', left: 22, top: 24, width: 48, height: 48, borderRadius: 24, backgroundColor: 'rgba(248,247,244,.90)', borderWidth: 1, borderColor: 'rgba(255,255,255,.28)', alignItems: 'center', justifyContent: 'center', elevation: 6 },
-  backText: { color: '#17181d', fontSize: 22, lineHeight: 24, fontWeight: '800', includeFontPadding: false, transform: [{ translateY: -1 }] },
+  backIcon: { width: 25, height: 25 },
   kicker: { color: colors.orange, fontSize: 10, fontWeight: '900', letterSpacing: 1.1, textTransform: 'uppercase', marginTop: 18 },
   title: { color: colors.text, fontSize: 28, fontWeight: '900', letterSpacing: -1, marginTop: 6 },
   actions: { flexDirection: 'row', gap: 9, marginTop: 16 },
