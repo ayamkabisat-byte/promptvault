@@ -98,7 +98,7 @@ export function FloatingSearch({ value, onChangeText, placeholder = 'Search…',
   if (!open) {
     return (
       <Pressable style={styles.searchFab} onPress={() => setOpen(true)} hitSlop={14}>
-        <Text style={styles.searchIcon}>⌕</Text>
+        <ExpoImage source={require('../assets/icons/search.svg')} style={styles.searchIconImage} contentFit="contain" />
       </Pressable>
     );
   }
@@ -184,7 +184,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
     shadowColor: '#000', shadowOpacity: .11, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 9,
   },
-  searchIcon: { color: '#17181d', fontSize: 28, lineHeight: 30, transform: [{ rotate: '-12deg' }, { translateY: -1 }] },
+  searchIconImage: { width: 30, height: 30 },
   searchPanel: {
     position: 'absolute', left: 14, right: 14, top: 54, zIndex: 80,
     height: 50, borderRadius: 25, paddingLeft: 18, paddingRight: 6,
