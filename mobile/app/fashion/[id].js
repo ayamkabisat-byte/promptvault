@@ -3,6 +3,7 @@ import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as Clipboard from 'expo-clipboard';
+import { Image as ExpoImage } from 'expo-image';
 import { supabase } from '../../lib/supabase';
 import { colors } from '../../lib/theme';
 import { useFavorites } from '../../context/FavoritesContext';
@@ -87,7 +88,7 @@ export default function FashionDetailScreen() {
         <View style={styles.hero}>
           {image ? <Image source={{ uri: image }} style={styles.image} resizeMode="contain" /> : null}
           <Pressable style={styles.back} onPress={() => router.back()} hitSlop={10}>
-            <Text style={styles.backText}>←</Text>
+            <ExpoImage source={require('../../assets/icons/arrow-left.svg')} style={styles.backIcon} contentFit="contain" />
           </Pressable>
           <View style={styles.modeSwitch}>
             <Pressable disabled={!item.image_img2img_url} style={[styles.modeButton, mode === 'look' && styles.modeActive]} onPress={() => setMode('look')}>
@@ -147,7 +148,7 @@ const styles = StyleSheet.create({
   hero: { position: 'relative', width: '100%', height: 520, borderRadius: 22, overflow: 'hidden', backgroundColor: '#050507' },
   image: { width: '100%', height: '100%' },
   back: { position: 'absolute', left: 22, top: 24, width: 48, height: 48, borderRadius: 24, backgroundColor: 'rgba(248,247,244,.90)', borderWidth: 1, borderColor: 'rgba(255,255,255,.28)', alignItems: 'center', justifyContent: 'center', elevation: 6 },
-  backText: { color: '#17181d', fontSize: 22, lineHeight: 24, fontWeight: '800', includeFontPadding: false, transform: [{ translateY: -1 }] },
+  backIcon: { width: 25, height: 25 },
   modeSwitch: { position: 'absolute', right: 18, top: 24, flexDirection: 'row', gap: 3, backgroundColor: 'rgba(248,247,244,.90)', borderWidth: 1, borderColor: 'rgba(255,255,255,.28)', padding: 4, borderRadius: 22 },
   modeButton: { height: 34, paddingHorizontal: 12, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
   modeActive: { backgroundColor: colors.lavender },
