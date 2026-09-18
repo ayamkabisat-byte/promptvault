@@ -25,9 +25,7 @@
     "react-native": "0.83.10",
     "react-native-safe-area-context": "~5.6.2",
     "react-native-screens": "~4.23.0",
-    "react-native-url-polyfill": "^2.0.0"
-  },
-  "devDependencies": {
+    "react-native-url-polyfill": "^2.0.0",
     "sharp": "^0.34.4"
   }
 }
