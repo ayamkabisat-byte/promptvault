@@ -1,27 +1,26 @@
 import { useEffect, useRef } from 'react';
-import { Animated, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Animated, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { Image as ExpoImage } from 'expo-image';
 import { Tabs } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../../lib/theme';
 import { NavBarProvider, useNavBar } from '../../context/NavBarContext';
 
-const SYMBOLS = { index: '⌂', fashion: '✦', favorites: '♡' };
+const ICONS = {
+  index: require('../../assets/icons/home.svg'),
+  fashion: require('../../assets/icons/fashion.svg'),
+  favorites: require('../../assets/icons/heart.svg'),
+};
 
 function TabIcon({ routeName, focused }) {
-  const symbol = SYMBOLS[routeName] || '•';
+  const size = routeName === 'fashion' ? 34 : routeName === 'favorites' ? 30 : 29;
   return (
     <View style={[styles.iconBubble, focused && styles.iconBubbleActive]}>
-      <Text
-        style={[
-          styles.iconText,
-          routeName === 'index' && styles.homeIcon,
-          routeName === 'fashion' && styles.sparkIcon,
-          routeName === 'favorites' && styles.heartIcon,
-          focused && styles.iconTextActive,
-        ]}
-      >
-        {symbol}
-      </Text>
+      <ExpoImage
+        source={ICONS[routeName] || ICONS.index}
+        style={{ width: size, height: size, opacity: focused ? 1 : 0.52 }}
+        contentFit="contain"
+      />
     </View>
   );
 }
@@ -125,8 +124,8 @@ export default function TabsLayout() {
 const styles = StyleSheet.create({
   bar: {
     position: 'absolute', left: 14, zIndex: 100,
-    backgroundColor: 'rgba(248,247,244,.74)',
-    borderWidth: 1, borderColor: 'rgba(255,255,255,.22)',
+    backgroundColor: 'rgba(248,247,244,.72)',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,.24)',
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-around',
     paddingHorizontal: 8,
     shadowColor: '#000', shadowOpacity: .13, shadowRadius: 18, shadowOffset: { width: 0, height: 8 }, elevation: 15,
@@ -135,10 +134,5 @@ const styles = StyleSheet.create({
   tabButton: { flex: 1, alignSelf: 'stretch', alignItems: 'center', justifyContent: 'center' },
   compactButton: { width: 58, height: 58, alignItems: 'center', justifyContent: 'center' },
   iconBubble: { width: 46, height: 46, borderRadius: 23, alignItems: 'center', justifyContent: 'center' },
-  iconBubbleActive: { backgroundColor: 'rgba(255,145,56,.14)' },
-  iconText: { color: '#686b76', fontWeight: '700', textAlign: 'center', includeFontPadding: false },
-  homeIcon: { fontSize: 25, lineHeight: 28, transform: [{ translateY: 1 }] },
-  sparkIcon: { fontSize: 25, lineHeight: 27, transform: [{ translateY: -1 }] },
-  heartIcon: { fontSize: 28, lineHeight: 30, transform: [{ translateY: 0 }] },
-  iconTextActive: { color: '#17181d' },
+  iconBubbleActive: { backgroundColor: 'rgba(255,108,20,.13)' },
 });
