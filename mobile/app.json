@@ -6,17 +6,17 @@
     "orientation": "portrait",
     "scheme": "promptvault",
     "userInterfaceStyle": "dark",
-    "icon": "./assets/brand/app-icon.svg",
+    "icon": "./assets/brand/generated/app-icon.png",
     "plugins": [
       "expo-router"
     ],
     "android": {
       "package": "com.ayamkabisat.promptvault",
       "versionCode": 9,
-      "icon": "./assets/brand/app-icon.svg",
+      "icon": "./assets/brand/generated/app-icon.png",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/brand/adaptive-foreground.svg",
-        "monochromeImage": "./assets/brand/monochrome-icon.svg",
+        "foregroundImage": "./assets/brand/generated/adaptive-foreground.png",
+        "monochromeImage": "./assets/brand/generated/monochrome-icon.png",
         "backgroundColor": "#F7F5F1"
       }
     },
