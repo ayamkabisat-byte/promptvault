@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Camera, Dice5, LayoutGrid, Palette, Search, Shuffle, Sparkles } from "lucide-react";
+import { Camera, Dice5, LayoutGrid, Palette, Search, Shuffle, Slash, Sparkles } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { getPublicStats, incrementPromptMetric, trackSiteVisit } from "@/lib/metrics";
 import { usePresence } from "@/hooks/usePresence";
@@ -199,6 +199,7 @@ export default function GalleryV2() {
         <div className="pv2-gallery-actions">
           <button onClick={reshuffle} title="Shuffle gallery"><Shuffle size={14} /> <span>Shuffle</span></button>
           <button onClick={surpriseMe} title="Open a random prompt"><Dice5 size={14} /> <span>Surprise</span></button>
+          <Link href="/slashlab" className="pv2-slashlab-link" aria-label="Open SlashLab"><Slash size={14} /> <span>SlashLab</span></Link>
           <Link href="/admin">Admin</Link>
         </div>
       </section>
@@ -300,6 +301,8 @@ export default function GalleryV2() {
         .pv2-gallery-actions{display:flex;align-items:center;gap:7px;}
         .pv2-gallery-actions button,.pv2-gallery-actions a{height:30px;border-radius:9px;border:1px solid var(--border);background:rgba(255,255,255,.025);padding:0 10px;display:inline-flex;align-items:center;gap:6px;color:var(--muted);font-size:10px;font-weight:700;cursor:pointer;}
         .pv2-gallery-actions button:hover,.pv2-gallery-actions a:hover{color:var(--text);border-color:var(--border-strong);background:var(--surface2);}
+        .pv2-gallery-actions .pv2-slashlab-link{color:var(--accent2);border-color:rgba(255,157,46,.22);background:rgba(255,157,46,.06)}
+        .pv2-gallery-actions .pv2-slashlab-link:hover{border-color:rgba(255,157,46,.45);background:rgba(255,157,46,.12)}
 
         .pv2-gallery-controls,.pv2-gallery-first .pv2-filterbar,.pv2-gallery-first .pv2-results-head,.pv2-gallery-first .pv2-masonry,.pv2-gallery-first .pv2-empty{max-width:2100px;margin-left:auto;margin-right:auto;padding-left:clamp(12px,1.8vw,30px);padding-right:clamp(12px,1.8vw,30px);}
         .pv2-gallery-controls{display:flex;align-items:center;gap:10px;padding-top:10px;margin-bottom:8px;}
@@ -361,6 +364,7 @@ export default function GalleryV2() {
           .pv2-gallery-first .pv2-filterbar select{min-width:118px;max-width:130px;}
           .pv2-gallery-brand strong{display:none;}
           .pv2-gallery-actions a{padding:0 8px;}
+          .pv2-gallery-actions .pv2-slashlab-link span{display:none;}
         }
         @media (max-width:480px){
           .pv2-gallery-strip{padding-left:10px;padding-right:10px;}
