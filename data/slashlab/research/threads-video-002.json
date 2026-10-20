@@ -1,0 +1,465 @@
+{
+  "schema_version": "1.0",
+  "collection": "SlashLab / PromptVault",
+  "collection_part": "Research / command idea backlog (NOT public before-after gallery)",
+  "source_id": "threads-user-video-002",
+  "source_filename": "1000149018.mp4",
+  "source_kind": "user_uploaded_threads_screen_recording",
+  "analyzed_on": "2026-10-20",
+  "source_duration_seconds": 26.33,
+  "evidence_level": "Visual demonstration with on-screen slash strings and corresponding images; not an independently controlled reproducibility test.",
+  "counts": {
+    "visible_demonstrations": 5,
+    "exact_distinct_slash_tokens": 13,
+    "single_demonstrations": 1,
+    "mixed_demonstrations": 4,
+    "new_slashlab_proposals": 12
+  },
+  "demos": [
+    {
+      "id": "T002-M01",
+      "commands": [
+        "/overheadpov",
+        "/perspectivehack",
+        "/onepoint"
+      ],
+      "observed_result": "Person among stream stones is shown from a much higher, near overhead perspective.",
+      "impact": [
+        "viewpoint",
+        "geometry",
+        "composition"
+      ],
+      "risk": "high",
+      "seconds": "00:00-00:05"
+    },
+    {
+      "id": "T002-S01",
+      "commands": [
+        "/characterfocus"
+      ],
+      "observed_result": "Person sitting among yellow meadow flowers is composed larger and draws more attention.",
+      "impact": [
+        "subject_emphasis",
+        "framing"
+      ],
+      "risk": "medium",
+      "seconds": "00:05-00:10"
+    },
+    {
+      "id": "T002-M02",
+      "commands": [
+        "/hdr",
+        "/bokehbg",
+        "/cinematic"
+      ],
+      "observed_result": "Subject by a stream has brighter/high-contrast light, softer background and an editorial look.",
+      "impact": [
+        "tonal_range",
+        "background_depth",
+        "mood"
+      ],
+      "risk": "medium",
+      "seconds": "00:10-00:15.5"
+    },
+    {
+      "id": "T002-M03",
+      "commands": [
+        "/closeup",
+        "/bluefilter",
+        "/bokeh"
+      ],
+      "observed_result": "Forest portrait becomes a tighter crop with cooler color character and blurred background.",
+      "impact": [
+        "framing",
+        "color",
+        "depth"
+      ],
+      "risk": "medium",
+      "seconds": "00:15.5-00:20.5"
+    },
+    {
+      "id": "T002-M04",
+      "commands": [
+        "/throughdoorcrackeditorial",
+        "/secretobserver",
+        "/candidpose"
+      ],
+      "observed_result": "Person near a staircase appears viewed through foreground obstruction, like a discreet observational photograph.",
+      "impact": [
+        "foreground_occlusion",
+        "storytelling",
+        "pose"
+      ],
+      "risk": "high",
+      "seconds": "00:20.5-00:26.3"
+    }
+  ],
+  "extracted_commands": [
+    {
+      "command": "/overheadpov",
+      "category": "Viewpoint",
+      "proposed_interpretation": "Move camera viewpoint over the scene, looking down toward subject",
+      "source": "visible_in_user_video",
+      "catalog_relation": "new",
+      "status": "research_candidate",
+      "is_official_chatgpt_command": false,
+      "independently_verified": false,
+      "geometry_risk": "high"
+    },
+    {
+      "command": "/perspectivehack",
+      "category": "Composition",
+      "proposed_interpretation": "Reinterpret viewpoint/geometry for dramatic depth; non-technical shorthand",
+      "source": "visible_in_user_video",
+      "catalog_relation": "new",
+      "status": "research_candidate",
+      "is_official_chatgpt_command": false,
+      "independently_verified": false,
+      "geometry_risk": "high"
+    },
+    {
+      "command": "/onepoint",
+      "category": "Composition",
+      "proposed_interpretation": "Use one-point perspective and a clear vanishing point where appropriate",
+      "source": "visible_in_user_video",
+      "catalog_relation": "new",
+      "status": "research_candidate",
+      "is_official_chatgpt_command": false,
+      "independently_verified": false,
+      "geometry_risk": "high"
+    },
+    {
+      "command": "/characterfocus",
+      "category": "Subject focus",
+      "proposed_interpretation": "Make original character the most visually prominent without substituting identity",
+      "source": "visible_in_user_video",
+      "catalog_relation": "prior_research",
+      "status": "research_candidate",
+      "is_official_chatgpt_command": false,
+      "independently_verified": false,
+      "geometry_risk": "medium"
+    },
+    {
+      "command": "/hdr",
+      "category": "Exposure / Tone",
+      "proposed_interpretation": "High dynamic range-inspired highlight and shadow balancing, not necessarily exposure merging",
+      "source": "visible_in_user_video",
+      "catalog_relation": "new",
+      "status": "research_candidate",
+      "is_official_chatgpt_command": false,
+      "independently_verified": false,
+      "geometry_risk": "medium"
+    },
+    {
+      "command": "/bokehbg",
+      "category": "Depth of field",
+      "proposed_interpretation": "Blur background and create background bokeh; overlaps /backgroundbokeh",
+      "source": "visible_in_user_video",
+      "catalog_relation": "new_overlap",
+      "status": "research_candidate",
+      "is_official_chatgpt_command": false,
+      "independently_verified": false,
+      "geometry_risk": "medium"
+    },
+    {
+      "command": "/cinematic",
+      "category": "Color / Mood",
+      "proposed_interpretation": "Cinematic atmosphere with a cohesive visual treatment",
+      "source": "visible_in_user_video",
+      "catalog_relation": "tested_batch001",
+      "status": "research_candidate",
+      "is_official_chatgpt_command": false,
+      "independently_verified": false,
+      "geometry_risk": "medium"
+    },
+    {
+      "command": "/closeup",
+      "category": "Framing",
+      "proposed_interpretation": "Tighten framing around subject; do not confuse with microscopic macro photography",
+      "source": "visible_in_user_video",
+      "catalog_relation": "new",
+      "status": "research_candidate",
+      "is_official_chatgpt_command": false,
+      "independently_verified": false,
+      "geometry_risk": "medium"
+    },
+    {
+      "command": "/bluefilter",
+      "category": "Color grading",
+      "proposed_interpretation": "Shift toward cool blue tones while retaining natural subject colors",
+      "source": "visible_in_user_video",
+      "catalog_relation": "new",
+      "status": "research_candidate",
+      "is_official_chatgpt_command": false,
+      "independently_verified": false,
+      "geometry_risk": "medium"
+    },
+    {
+      "command": "/bokeh",
+      "category": "Depth of field",
+      "proposed_interpretation": "Create soft out-of-focus light/discs; overlaps /bokehbg and /backgroundbokeh",
+      "source": "visible_in_user_video",
+      "catalog_relation": "new_overlap",
+      "status": "research_candidate",
+      "is_official_chatgpt_command": false,
+      "independently_verified": false,
+      "geometry_risk": "medium"
+    },
+    {
+      "command": "/throughdoorcrackeditorial",
+      "category": "Foreground framing",
+      "proposed_interpretation": "Recompose as a subject seen through a small opening or door gap",
+      "source": "visible_in_user_video",
+      "catalog_relation": "new",
+      "status": "research_candidate",
+      "is_official_chatgpt_command": false,
+      "independently_verified": false,
+      "geometry_risk": "high"
+    },
+    {
+      "command": "/secretobserver",
+      "category": "Narrative perspective",
+      "proposed_interpretation": "Create a distant, partially hidden observer point of view; overlaps /hiddenobserver",
+      "source": "visible_in_user_video",
+      "catalog_relation": "new_overlap",
+      "status": "research_candidate",
+      "is_official_chatgpt_command": false,
+      "independently_verified": false,
+      "geometry_risk": "high"
+    },
+    {
+      "command": "/candidpose",
+      "category": "Pose / Direction",
+      "proposed_interpretation": "Natural, unposed-looking body language; preserve anatomy and context",
+      "source": "visible_in_user_video",
+      "catalog_relation": "new",
+      "status": "research_candidate",
+      "is_official_chatgpt_command": false,
+      "independently_verified": false,
+      "geometry_risk": "medium"
+    }
+  ],
+  "new_single_command_proposals": [
+    {
+      "command": "/lowanglepov",
+      "category": "Viewpoint",
+      "proposed_interpretation": "Camera viewpoint low to the ground, aimed slightly upwards",
+      "source": "slashlab_original_proposal",
+      "status": "untested_idea",
+      "is_official_chatgpt_command": false,
+      "independently_verified": false,
+      "geometry_risk": "medium"
+    },
+    {
+      "command": "/groundlevelpov",
+      "category": "Viewpoint",
+      "proposed_interpretation": "Very low eye line, close to ground or water surface",
+      "source": "slashlab_original_proposal",
+      "status": "untested_idea",
+      "is_official_chatgpt_command": false,
+      "independently_verified": false,
+      "geometry_risk": "medium"
+    },
+    {
+      "command": "/throughfoliage",
+      "category": "Foreground framing",
+      "proposed_interpretation": "Observe subject through soft leaves with an intentionally layered foreground",
+      "source": "slashlab_original_proposal",
+      "status": "untested_idea",
+      "is_official_chatgpt_command": false,
+      "independently_verified": false,
+      "geometry_risk": "medium"
+    },
+    {
+      "command": "/framewithinframe",
+      "category": "Composition",
+      "proposed_interpretation": "Use architectural or natural frames around a subject",
+      "source": "slashlab_original_proposal",
+      "status": "untested_idea",
+      "is_official_chatgpt_command": false,
+      "independently_verified": false,
+      "geometry_risk": "medium"
+    },
+    {
+      "command": "/vanishingpoint",
+      "category": "Composition",
+      "proposed_interpretation": "Direct leading lines toward a clear convergence point",
+      "source": "slashlab_original_proposal",
+      "status": "untested_idea",
+      "is_official_chatgpt_command": false,
+      "independently_verified": false,
+      "geometry_risk": "high"
+    },
+    {
+      "command": "/layereddepth",
+      "category": "Depth / Composition",
+      "proposed_interpretation": "Distinct foreground, subject plane, and distant background",
+      "source": "slashlab_original_proposal",
+      "status": "untested_idea",
+      "is_official_chatgpt_command": false,
+      "independently_verified": false,
+      "geometry_risk": "medium"
+    },
+    {
+      "command": "/dappledlight",
+      "category": "Lighting",
+      "proposed_interpretation": "Irregular soft patches of sunlight passing through leaves",
+      "source": "slashlab_original_proposal",
+      "status": "untested_idea",
+      "is_official_chatgpt_command": false,
+      "independently_verified": false,
+      "geometry_risk": "low"
+    },
+    {
+      "command": "/windowcandid",
+      "category": "Narrative perspective",
+      "proposed_interpretation": "Natural observational framing near a window",
+      "source": "slashlab_original_proposal",
+      "status": "untested_idea",
+      "is_official_chatgpt_command": false,
+      "independently_verified": false,
+      "geometry_risk": "medium"
+    },
+    {
+      "command": "/reflectionpeek",
+      "category": "Reflections",
+      "proposed_interpretation": "Partially frame the subject through a mirror or window reflection",
+      "source": "slashlab_original_proposal",
+      "status": "untested_idea",
+      "is_official_chatgpt_command": false,
+      "independently_verified": false,
+      "geometry_risk": "high"
+    },
+    {
+      "command": "/foregroundveil",
+      "category": "Foreground framing",
+      "proposed_interpretation": "Soft, semi-obscuring out-of-focus foreground for photographic depth",
+      "source": "slashlab_original_proposal",
+      "status": "untested_idea",
+      "is_official_chatgpt_command": false,
+      "independently_verified": false,
+      "geometry_risk": "medium"
+    },
+    {
+      "command": "/portraitcompression",
+      "category": "Lens / Perspective",
+      "proposed_interpretation": "Telephoto portrait compression without extreme physical alteration",
+      "source": "slashlab_original_proposal",
+      "status": "untested_idea",
+      "is_official_chatgpt_command": false,
+      "independently_verified": false,
+      "geometry_risk": "medium"
+    },
+    {
+      "command": "/subtlehdr",
+      "category": "Exposure / Tone",
+      "proposed_interpretation": "Natural dynamic range recovery, restrained highlights and readable shadows",
+      "source": "slashlab_original_proposal",
+      "status": "untested_idea",
+      "is_official_chatgpt_command": false,
+      "independently_verified": false,
+      "geometry_risk": "low"
+    }
+  ],
+  "vocabulary_overlaps": [
+    {
+      "a": "/bokehbg",
+      "b": "/backgroundbokeh",
+      "relationship": "similar_intent",
+      "guidance": "Preserve original spelling in source demos; choose canonical catalog spelling only after isolated test."
+    },
+    {
+      "a": "/bokeh",
+      "b": "/backgroundbokeh",
+      "relationship": "overlapping_not_identical",
+      "guidance": "Bokeh can affect more than background; do not auto-collapse until tested."
+    },
+    {
+      "a": "/secretobserver",
+      "b": "/hiddenobserver",
+      "relationship": "similar_intent",
+      "guidance": "Both may convey covert-observer framing; try A/B tests."
+    },
+    {
+      "a": "/overheadpov",
+      "b": "/birdseye",
+      "relationship": "similar_intent",
+      "guidance": "Top down vs elevated viewpoint can differ; compare on same source."
+    },
+    {
+      "a": "/closeup",
+      "b": "/macro",
+      "relationship": "not_synonyms",
+      "guidance": "Close framing of a person is not the same as macro magnification."
+    }
+  ],
+  "internal_logic": [
+    {
+      "rule": "Independent validation",
+      "description": "Test one slash at a time on an unchanged source before testing a mixed recipe; a mixed result does not validate the independent contribution of its ingredients."
+    },
+    {
+      "rule": "Short public interface",
+      "description": "Keep public copy operation exactly the slash token or short combination; interpretation and risk metadata are internal."
+    },
+    {
+      "rule": "Composition before grading",
+      "description": "For suggested mixed recipes group viewpoint/framing then lighting/depth and finally color/texture; this is guidance, not an executable engine."
+    },
+    {
+      "rule": "Preserve semantics",
+      "description": "Use original subject identity/clothing unless a command intentionally alters scene viewpoint or pose; mark risk instead of promising full fidelity."
+    },
+    {
+      "rule": "No forced aspect ratio",
+      "description": "Never stretch before or after; show both with object-fit contain and capture natural dimensions."
+    },
+    {
+      "rule": "Ambiguous synonyms",
+      "description": "Log overlapping names; avoid publishing visually identical aliases as different proven effects without a comparative test."
+    },
+    {
+      "rule": "Source integrity",
+      "description": "Use real user-tested source/after images; do not publish video creator's image as a SlashLab tested user example."
+    }
+  ],
+  "experimental_mixes": [
+    {
+      "commands": [
+        "/throughfoliage",
+        "/secretobserver",
+        "/backgroundbokeh"
+      ],
+      "concept": "Observer peeking through leaves, separated subject",
+      "status": "untested_idea"
+    },
+    {
+      "commands": [
+        "/lowanglepov",
+        "/vanishingpoint",
+        "/cinematic"
+      ],
+      "concept": "Dynamic low-perspective street composition",
+      "status": "untested_idea"
+    },
+    {
+      "commands": [
+        "/framewithinframe",
+        "/dappledlight",
+        "/portraitcompression"
+      ],
+      "concept": "Layered fashion portrait framed by surroundings",
+      "status": "untested_idea"
+    },
+    {
+      "commands": [
+        "/reflectionpeek",
+        "/windowcandid",
+        "/bluefilter"
+      ],
+      "concept": "Subtle documentary look with a reflective foreground",
+      "status": "untested_idea"
+    }
+  ],
+  "publication_policy": "These definitions are only research/backlog. Do not create entries in public.slashlab_entries or publish to the website until matching original and tested result photos are provided."
+}
