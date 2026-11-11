@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Check, ChevronLeft, ChevronRight, Copy, Images, Search, Slash, Sparkles, X } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import SlashLabBeforeAfter from "@/components/SlashLabBeforeAfter";
 
 const compactRatio = (width, height) => width && height ? `${width} × ${height}` : "Unknown";
 const differentRatio = (item) => {
@@ -20,7 +21,7 @@ export default function SlashLabGallery() {
   const [category, setCategory] = useState("All");
   const [mode, setMode] = useState("All");
   const [selected, setSelected] = useState(null);
-  const [view, setView] = useState("compare");
+  const [view, setView] = useState("slider");
   const [copied, setCopied] = useState("");
 
   useEffect(() => {
@@ -57,7 +58,7 @@ export default function SlashLabGallery() {
     return [item.command, item.title, item.category, item.description, item.batch].join(" ").toLowerCase().includes(needle);
   }), [entries, category, mode, search]);
 
-  const openEntry = (item) => { setSelected(item); setView("compare"); };
+  const openEntry = (item) => { setSelected(item); setView("slider"); };
   const navigate = (step) => {
     if (!selected || filtered.length < 2) return;
     const index = filtered.findIndex((item) => item.id === selected.id);
@@ -156,12 +157,14 @@ export default function SlashLabGallery() {
               <button type="button" className="sl1-close" aria-label="Close comparison" onClick={() => setSelected(null)}><X size={21}/></button>
             </div>
             <div className="sl1-tabbar" role="group" aria-label="Comparison view">
-              {[["compare","Side by side"],["before","Original"],["after","Result"]].map(([name,title])=><button key={name} className={view===name?"active":""} type="button" onClick={()=>setView(name)}>{title}</button>)}
+              {[["slider","Slider ↔"],["compare","Side by side"],["before","Original"],["after","Result"]].map(([name,title])=><button key={name} className={view===name?"active":""} type="button" onClick={()=>setView(name)}>{title}</button>)}
             </div>
+            {view === "slider" ? <SlashLabBeforeAfter key={selected.entry_code} item={selected} /> : (
             <div className={`sl1-comparison ${view === "compare" ? "compare" : "single-view"}`}>
               {(view==="compare" || view==="before") && <figure><div className="sl1-figure-image"><img src={selected.before_image_url} alt={`Original photo for ${selected.command}`}/></div><figcaption>BEFORE <span>{compactRatio(selected.before_width,selected.before_height)}</span></figcaption></figure>}
               {(view==="compare" || view==="after") && <figure><div className="sl1-figure-image"><img src={selected.after_image_url} alt={`Edited result for ${selected.command}`}/></div><figcaption>AFTER <span>{compactRatio(selected.after_width,selected.after_height)}</span></figcaption></figure>}
             </div>
+            )}
             <div className="sl1-dialog-bottom">
               <div className="sl1-notes"><strong>{selected.title}</strong><p>{selected.description || "Original photo compared with the tested result of this slash command."}</p>{differentRatio(selected) && <small>Aspect ratio changed in this result. Both photos are shown without cropping.</small>}</div>
               <button className="sl1-copy-primary" onClick={() => copy(selected)} type="button">{copied===selected.entry_code?<Check size={16}/>:<Copy size={16}/>} {copied===selected.entry_code?"Copied!":"Copy Slash"}</button>
